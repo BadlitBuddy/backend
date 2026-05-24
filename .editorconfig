@@ -1,0 +1,7 @@
+[*.cs]
+# Disable .NET Roslyn Primary Constructor suggestion
+csharp_style_prefer_primary_constructors = false
+dotnet_diagnostic.IDE0290.severity = none
+
+# Disable JetBrains ReSharper / Rider suggestion (if you use it)
+resharper_convert_to_primary_constructor_highlighting = none
