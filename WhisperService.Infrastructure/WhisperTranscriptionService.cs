@@ -4,14 +4,13 @@ using WhisperService.Core.Constants;
 
 namespace Infrastructure;
 
-public class WhisperTranscriptionService : ITranscriptionService, IDisposable
+public sealed class WhisperTranscriptionService : ITranscriptionService, IDisposable
 {
     private readonly WhisperProcessor _processor;
     private readonly WhisperFactory _whisperFactory;
-    
+
     public WhisperTranscriptionService()
     {
-
         try
         {
             var modelPath = Path.Combine(AppContext.BaseDirectory, "Models", ModelOptions.LargeV3TurboQ5_0);
@@ -19,11 +18,7 @@ public class WhisperTranscriptionService : ITranscriptionService, IDisposable
             {
                 throw new FileNotFoundException("Model file not found.");
             }
-            else
-            {
-                Console.WriteLine("Model is found");
-            }
-            
+
             _whisperFactory = WhisperFactory.FromPath(modelPath);
             _processor = _whisperFactory.CreateBuilder()
                 .WithLanguage(LanguageOptions.Auto)
@@ -32,22 +27,21 @@ public class WhisperTranscriptionService : ITranscriptionService, IDisposable
         catch (Exception ex)
         {
             Dispose();
-            Console.WriteLine(ex.Message);
-            throw new InvalidOperationException("Failed to initialize WhisperTranscriptionService.");
+            throw new InvalidOperationException($"Failed to initialize WhisperTranscriptionService with message: {ex.Message}");
         }
     }
-    
+
     public void Dispose()
     {
         Dispose(true);
         GC.SuppressFinalize(this);
     }
 
-    protected virtual void Dispose(bool disposing)
+    private void Dispose(bool disposing)
     {
         if (!disposing) return;
-        _processor?.Dispose();
-        _whisperFactory?.Dispose();
+        _processor.Dispose();
+        _whisperFactory.Dispose();
     }
 
     public async Task TranscribeAsync(Stream fileStream)
