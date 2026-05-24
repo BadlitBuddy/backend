@@ -5,3 +5,10 @@ dotnet_diagnostic.IDE0290.severity = none
 
 # Disable JetBrains ReSharper / Rider suggestion (if you use it)
 resharper_convert_to_primary_constructor_highlighting = none
+
+# Allow both 'var' and explicit types for built-in types (int, string, etc.)
+csharp_style_var_for_built_in_types = true:none
+# Allow both 'var' and explicit types for when the type is apparent
+csharp_style_var_when_type_is_apparent = true:none
+# Allow both 'var' and explicit types everywhere else
+csharp_style_var_elsewhere = true:none
