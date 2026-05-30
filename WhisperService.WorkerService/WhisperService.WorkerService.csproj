@@ -12,6 +12,8 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\Shared.Abstractions\Shared.Abstractions.csproj" />
+      <ProjectReference Include="..\Shared.Infrastructure\Shared.Infrastructure.csproj" />
       <ProjectReference Include="..\WhisperService.Core\WhisperService.Core.csproj" />
       <ProjectReference Include="..\WhisperService.Infrastructure\WhisperService.Infrastructure.csproj" />
     </ItemGroup>

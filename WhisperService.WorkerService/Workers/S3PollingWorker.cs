@@ -1,4 +1,4 @@
-using WhisperService.Core.Services;
+using Shared.Abstractions.ExternalServices.S3;
 using WhisperService.WorkerService.Channels;
 using WhisperService.WorkerService.Contracts;
 

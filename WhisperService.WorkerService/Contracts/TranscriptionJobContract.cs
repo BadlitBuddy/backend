@@ -1,4 +1,4 @@
-using WhisperService.Core.Dtos;
+using Shared.Contracts.Dtos;
 
 namespace WhisperService.WorkerService.Contracts;
 
