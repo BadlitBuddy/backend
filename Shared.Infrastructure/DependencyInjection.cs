@@ -1,15 +1,27 @@
 using Amazon.Runtime;
 using Amazon.S3;
+using Hangfire;
+using Hangfire.Redis.StackExchange;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Shared.Abstractions.ExternalServices.S3;
 using Shared.Infrastructure.ExternalServices.S3;
+using StackExchange.Redis;
 
 namespace Shared.Infrastructure;
 
 public static class DependencyInjection
-{
+{   
+    public static IServiceCollection AddConnectionStringsConfiguration(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<ConnectionStrings>(
+            configuration.GetSection("ConnectionStrings")
+        );
+        
+        return services;
+    }
+    
     public static IServiceCollection AddS3Configuration(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<S3Options>(
@@ -39,6 +51,43 @@ public static class DependencyInjection
             };
     
             return new AmazonS3Client(credentials, s3Config);
+        });
+        
+        return services;
+    }
+    
+    public static IServiceCollection AddHangFireStorage(this IServiceCollection services)
+    {
+        services.AddSingleton<IConnectionMultiplexer>(sp =>
+        {
+            var connectionStrings = sp.GetRequiredService<IOptions<ConnectionStrings>>().Value;
+            return ConnectionMultiplexer.Connect(connectionStrings.Redis ??  throw new ArgumentException("Missing redis config"));
+        });
+        
+        services.AddHangfire((sp, config) =>
+        {
+            var redis = sp.GetRequiredService<IConnectionMultiplexer>();
+
+            config
+                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UseRedisStorage(redis, new RedisStorageOptions
+            {
+                Prefix = "hangfire:transcriptionapp:",
+                SucceededListSize = 10000,
+                DeletedListSize = 1000
+            });
+        });
+        
+        return services;
+    }
+    
+    public static IServiceCollection AddHangFireServerWorker(this IServiceCollection services)
+    {
+        services.AddHangfireServer(options =>
+        {
+            options.WorkerCount = 1;
         });
         
         return services;
