@@ -1,20 +1,20 @@
-using Infrastructure;
+using Shared.Abstractions.Jobs;
+using Shared.Abstractions.Services;
 using Shared.Infrastructure;
-using WhisperService.Core.Services;
-using WhisperService.WorkerService.Channels;
-using WhisperService.WorkerService.Workers;
+using Shared.Infrastructure.Jobs;
 
 var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services
+    .AddConnectionStringsConfiguration(builder.Configuration)
     .AddS3Configuration(builder.Configuration)
-    .AddS3Services();
+    .AddS3Services()
+    .AddHangFireStorage()
+    .AddHangFireServerWorker();
 
 builder.Services.AddSingleton<ITranscriptionService, WhisperTranscriptionService>();
-builder.Services.AddSingleton<TranscriptionQueueChannel>();
 
-builder.Services.AddHostedService<S3PollingWorker>();
-builder.Services.AddHostedService<TranscriptionWorker>();
+builder.Services.AddScoped<ITranscriptionJob, TranscriptionJob>();
 
 var host = builder.Build();
 host.Run();
