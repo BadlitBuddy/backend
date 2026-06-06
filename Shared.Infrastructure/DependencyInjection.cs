@@ -2,6 +2,7 @@ using Amazon.Runtime;
 using Amazon.S3;
 using Hangfire;
 using Hangfire.Redis.StackExchange;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -91,5 +92,11 @@ public static class DependencyInjection
         });
         
         return services;
+    }
+
+    public static WebApplication UseHangFireDashboard(this WebApplication app)
+    {
+        app.UseHangfireDashboard(); 
+        return app;
     }
 }
