@@ -19,4 +19,5 @@ public class User : BaseAuditableEntity<Guid>
     public Organization? Organization { get; private set; }
     public required string FirstName { get; set; }
     public string? LastName { get; private set; }
+    public List<TranscriptionJob> TranscriptionJobs { get; private set; } = [];
 }
