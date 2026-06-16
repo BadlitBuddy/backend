@@ -1,0 +1,9 @@
+namespace Api.Domain.Entities;
+
+public class TranscriptionJob : BaseAuditableEntity<int>
+{
+    public int UserId { get; set; }
+    public required string UnprocessedObjectKey { get; set; }
+    public string? ProcessedObjectKey { get; set; }
+    public TranscriptionJobStatus JobStatus { get; set; }
+}
