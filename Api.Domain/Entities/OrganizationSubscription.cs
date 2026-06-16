@@ -9,6 +9,6 @@ public class OrganizationSubscription : BaseAuditableEntity<int>
     public SubscriptionPlan? SubscriptionPlan { get; set; }
     public SubscriptionStatus SubscriptionStatus { get; set; }
     
-    public DateTime PlanStart { get; set; }
-    public DateTime PlanEnd { get; set; }
+    public DateTimeOffset PlanStart { get; set; }
+    public DateTimeOffset PlanEnd { get; set; }
 }
