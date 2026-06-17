@@ -9,10 +9,14 @@ public abstract class BaseAuditableEntityConfiguration<TEntity, TKey>
     public override void Configure(EntityTypeBuilder<TEntity> builder)
     {
         base.Configure(builder);
-
+        
+        builder.Property(e => e.CreatedByUserId)
+            .HasMaxLength(100);
         builder.Property(e => e.CreatedBy)
             .HasMaxLength(50);
 
+        builder.Property(e => e.LastModifiedByUserId)
+            .HasMaxLength(100);
         builder.Property(e => e.LastModifiedBy)
             .HasMaxLength(50);
 

@@ -12,6 +12,9 @@ public abstract class BaseEntityConfiguration<TEntity, TKey>
 
         builder.Property(e => e.PublicId)
             .HasMaxLength(50);
+        
+        builder.Property(e => e.DeletedById)
+            .HasMaxLength(100);
 
         builder.Property(e => e.DeletedBy)
             .HasMaxLength(50);
