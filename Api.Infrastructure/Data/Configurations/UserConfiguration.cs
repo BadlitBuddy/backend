@@ -7,6 +7,7 @@ public class UserConfiguration
     {
         base.Configure(builder);
 
+        builder.Property(x => x.Email).HasMaxLength(200).IsRequired();
         builder.Property(x => x.FirstName).HasMaxLength(200).IsRequired();
         builder.Property(x => x.LastName).HasMaxLength(200);
 
