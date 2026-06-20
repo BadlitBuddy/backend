@@ -7,7 +7,7 @@ public class User : BaseAuditableEntity<Guid>
     private User(){}
 
     [SetsRequiredMembers]
-    public User(Guid userId, Guid publicId, string email, string firstName, string lastName)
+    public User(Guid userId, Guid publicId, string email, string firstName, string? lastName)
     {
         Id = userId;
         PublicId = publicId.ToString();
