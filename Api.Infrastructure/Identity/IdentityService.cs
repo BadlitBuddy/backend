@@ -28,12 +28,17 @@ public class IdentityService : IIdentityService
         return user?.UserName;
     }
 
-    public async Task<(Result Result, string UserId)> CreateUserAsync(string firstName, string lastName, string email,
-        string password)
+    public async Task<bool> DoesUserExistByEmailAsync(string email)
+    {
+        return await _userManager.Users.AnyAsync(u => u.Email == email);
+    }
+
+    public async Task<(Result Result, string UserId)> CreateUserAsync(Guid userId, Guid publicId, string firstName, string? lastName, string email, string password)
     {
         var user = new ApplicationUser
         {
-            PublicId = Guid.NewGuid(),
+            Id = userId,
+            PublicId = publicId,
             Email = email,
             FirstName = firstName,
             LastName = lastName
