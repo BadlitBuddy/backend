@@ -8,17 +8,21 @@ namespace Shared.Infrastructure.ExternalServices.S3;
 
 public class S3AudioJobStorageService : IAudioJobStorageService
 {
+    private const long MaxBytes = 25L * 1024 * 1024;
     private readonly IAmazonS3 _s3Client;
     private readonly IOptions<S3Options> _options;
     private readonly ILogger<S3AudioJobStorageService> _logger;
 
-    public S3AudioJobStorageService(IAmazonS3 s3Client, IOptions<S3Options> options, ILogger<S3AudioJobStorageService> logger)
+    public S3AudioJobStorageService(
+        IAmazonS3 s3Client, IOptions<S3Options> options,
+        ILogger<S3AudioJobStorageService> logger
+    )
     {
         _s3Client = s3Client;
         _options = options;
         _logger = logger;
     }
-    
+
     public async Task<bool> IsStorageAvailableAsync(CancellationToken cancellationToken)
     {
         try
@@ -34,6 +38,44 @@ public class S3AudioJobStorageService : IAudioJobStorageService
         }
     }
 
+    public async Task<UploadUrlDto> CreateUploadUrlAsync(string userId, string originalFileName)
+    {
+        var fileExtension = Path.GetExtension(originalFileName);
+        if (!string.Equals(fileExtension, ".wav",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("Only .wav files are supported.");
+        }
+
+        var objectKey = $"{userId}/{Guid.CreateVersion7()}-{Path.GetFileName(originalFileName)}";
+        var request = new CreatePresignedPostRequest
+        {
+            BucketName = _options.Value.BucketName,
+            Key = objectKey,
+            Expires = DateTime.UtcNow.AddMinutes(15)
+        };
+        request.Fields.Add("Content-Type", "audio/wav");
+        request.Conditions.Add(
+            S3PostCondition.ExactMatch(
+                "$Content-Type",
+                "audio/wav"));
+        request.Conditions.Add(
+            S3PostCondition.ContentLengthRange(
+                1,
+                MaxBytes));
+        request.Conditions.Add(
+            S3PostCondition.StartsWith(
+                "key",
+                $"{userId}/"));
+
+        var response = await _s3Client.CreatePresignedPostAsync(request);
+        return new UploadUrlDto
+        {
+            Url = response.Url,
+            Fields = response.Fields
+        };
+    }
+
     public async Task<IEnumerable<AudioJobDto>> GetPendingJobsAsync(int batchSize, CancellationToken cancellationToken)
     {
         var request = new ListObjectsV2Request
@@ -43,8 +85,10 @@ public class S3AudioJobStorageService : IAudioJobStorageService
         };
 
         var response = await _s3Client.ListObjectsV2Async(request, cancellationToken);
-        
-        return response?.S3Objects == null ? [] : response.S3Objects.Select(s3Obj => new AudioJobDto(s3Obj.Key, s3Obj.Size));
+
+        return response?.S3Objects == null
+            ? []
+            : response.S3Objects.Select(s3Obj => new AudioJobDto(s3Obj.Key, s3Obj.Size));
     }
 
     public async Task<Stream> DownloadAudioAsync(string fileKey, CancellationToken cancellationToken)
@@ -70,7 +114,7 @@ public class S3AudioJobStorageService : IAudioJobStorageService
         try
         {
             var response = await _s3Client.DeleteObjectAsync(deleteRequest, cancellationToken);
-        
+
             return response.HttpStatusCode is System.Net.HttpStatusCode.OK or System.Net.HttpStatusCode.NoContent;
         }
         catch (AmazonS3Exception)
