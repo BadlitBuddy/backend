@@ -7,6 +7,6 @@ public interface IBaseEntity
 
     DateTimeOffset? DeletedAt { get; set; }
     string? DeletedBy { get; set; }
-    string? DeletedById { get; set; }
+    Guid? DeletedById { get; set; }
     User? DeletedByUser { get; set; }
 }

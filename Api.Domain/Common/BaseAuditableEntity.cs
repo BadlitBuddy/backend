@@ -6,11 +6,11 @@ public abstract class BaseAuditableEntity<T> : BaseEntity<T>, IBaseAuditableEnti
 {
     public DateTimeOffset Created { get; set; }
     public string? CreatedBy { get; set; }
-    public string? CreatedByUserId { get; set; }
+    public Guid? CreatedByUserId { get; set; }
     public User? CreatedByUser { get; set; }
 
     public DateTimeOffset? LastModified { get; set; }
     public string? LastModifiedBy { get; set; }
-    public string? LastModifiedByUserId { get; set; }
+    public Guid? LastModifiedByUserId { get; set; }
     public User? LastModifiedByUser { get; set; }
 }

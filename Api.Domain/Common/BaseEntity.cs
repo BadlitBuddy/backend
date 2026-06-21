@@ -10,6 +10,6 @@ public abstract class BaseEntity<T> : IBaseEntity {
     
     public DateTimeOffset? DeletedAt { get; set; }
     public string? DeletedBy { get; set; }
-    public string? DeletedById { get; set; }
+    public Guid? DeletedById { get; set; }
     public User? DeletedByUser { get; set; }
 }
