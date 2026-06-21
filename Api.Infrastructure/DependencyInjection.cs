@@ -30,16 +30,16 @@ public static class DependencyInjection
             provider.GetRequiredService<ApplicationDbContext>());
 
         var jwtSettings = builder.Configuration.GetSection("Jwt");
-        var secret = jwtSettings.GetSection("Secret").Value;
+        var secretKey = jwtSettings.GetSection("Key").Value;
         var issuer = jwtSettings.GetSection("Issuer").Value;
         var audience = jwtSettings.GetSection("Audience").Value;
-        if (string.IsNullOrEmpty(secret) || string.IsNullOrEmpty(issuer) || string.IsNullOrEmpty(audience))
+        if (string.IsNullOrEmpty(secretKey) || string.IsNullOrEmpty(issuer) || string.IsNullOrEmpty(audience))
         {
             throw new InvalidOperationException(
                 "JWT configuration is missing required values (Secret, Issuer, or Audience).");
         }
 
-        var encodedSecretKey = Encoding.UTF8.GetBytes(secret);
+        var encodedSecretKey = Encoding.UTF8.GetBytes(secretKey);
 
         builder.Services.AddAuthentication(options =>
             {
