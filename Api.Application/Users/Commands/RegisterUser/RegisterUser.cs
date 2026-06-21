@@ -31,8 +31,8 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, s
             throw new NotFoundException("Email","User");
         }
         
-        var userGuid = Guid.NewGuid();
-        var userPublicGuid  = Guid.NewGuid();
+        var userGuid = Guid.CreateVersion7();
+        var userPublicGuid  = Guid.CreateVersion7();
         
         var (result, userId) = await _identityService.CreateUserAsync(userGuid, userPublicGuid, request.FirstName, request.LastName, request.Email, request.Password);
 
