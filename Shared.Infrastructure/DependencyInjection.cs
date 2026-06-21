@@ -84,11 +84,11 @@ public static class DependencyInjection
         return services;
     }
     
-    public static IServiceCollection AddHangFireServerWorker(this IServiceCollection services)
+    public static IServiceCollection AddHangFireServerWorker(this IServiceCollection services, int workerCount = 1)
     {
         services.AddHangfireServer(options =>
         {
-            options.WorkerCount = 1;
+            options.WorkerCount = workerCount;
         });
         
         return services;
