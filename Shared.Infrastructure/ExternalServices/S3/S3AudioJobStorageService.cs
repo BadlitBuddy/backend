@@ -48,31 +48,19 @@ public class S3AudioJobStorageService : IAudioJobStorageService
         }
 
         var objectKey = $"{userId}/{Guid.CreateVersion7()}-{Path.GetFileName(originalFileName)}";
-        var request = new CreatePresignedPostRequest
+        var request = new GetPreSignedUrlRequest()
         {
             BucketName = _options.Value.BucketName,
             Key = objectKey,
+            Verb = HttpVerb.PUT,
+            ContentType = "audio/wav",
             Expires = DateTime.UtcNow.AddMinutes(15)
         };
-        request.Fields.Add("Content-Type", "audio/wav");
-        request.Conditions.Add(
-            S3PostCondition.ExactMatch(
-                "$Content-Type",
-                "audio/wav"));
-        request.Conditions.Add(
-            S3PostCondition.ContentLengthRange(
-                1,
-                MaxBytes));
-        request.Conditions.Add(
-            S3PostCondition.StartsWith(
-                "key",
-                $"{userId}/"));
 
-        var response = await _s3Client.CreatePresignedPostAsync(request);
+        var response = await _s3Client.GetPreSignedURLAsync(request);
         return new UploadUrlDto
         {
-            Url = response.Url,
-            Fields = response.Fields
+            Url = response
         };
     }
 
