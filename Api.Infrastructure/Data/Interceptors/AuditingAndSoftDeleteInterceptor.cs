@@ -14,21 +14,21 @@ public class AuditingAndSoftDeleteInterceptor : SaveChangesInterceptor
     }
 
     public override InterceptionResult<int> SavingChanges(
-        DbContextEventData eventData, 
+        DbContextEventData eventData,
         InterceptionResult<int> result)
     {
         UpdateEntities(eventData.Context);
-        
+
         return base.SavingChanges(eventData, result);
     }
 
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
-        DbContextEventData eventData, 
-        InterceptionResult<int> result, 
+        DbContextEventData eventData,
+        InterceptionResult<int> result,
         CancellationToken cancellationToken = default)
     {
         UpdateEntities(eventData.Context);
-        
+
         return base.SavingChangesAsync(eventData, result, cancellationToken);
     }
 
@@ -37,7 +37,7 @@ public class AuditingAndSoftDeleteInterceptor : SaveChangesInterceptor
         if (context == null) return;
 
         var now = DateTimeOffset.UtcNow;
-        var userId = new Guid(_currentUserService.Id!);
+        Guid? userId = _currentUserService.Id != null ? new Guid(_currentUserService.Id) : null;
         var userName = _currentUserService.Email;
 
         foreach (var entry in context.ChangeTracker.Entries())
@@ -59,12 +59,12 @@ public class AuditingAndSoftDeleteInterceptor : SaveChangesInterceptor
                 else if (entry.State == EntityState.Deleted)
                 {
                     entry.State = EntityState.Modified;
-                    
+
                     auditableEntity.IsActive = false;
                     auditableEntity.DeletedAt = now;
                     auditableEntity.DeletedBy = userName;
                     auditableEntity.DeletedById = userId;
-                    
+
                     auditableEntity.LastModified = now;
                     auditableEntity.LastModifiedBy = userName;
                     auditableEntity.LastModifiedByUserId = userId;
@@ -75,7 +75,7 @@ public class AuditingAndSoftDeleteInterceptor : SaveChangesInterceptor
                 if (entry.State == EntityState.Deleted)
                 {
                     entry.State = EntityState.Modified;
-                    
+
                     baseEntity.IsActive = false;
                     baseEntity.DeletedAt = now;
                     baseEntity.DeletedBy = userName;
