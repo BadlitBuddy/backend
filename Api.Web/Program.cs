@@ -14,6 +14,8 @@ builder.AddWebServices();
 
 builder.Services
     .AddConnectionStringsConfiguration(builder.Configuration)
+    .AddS3Configuration(builder.Configuration)
+    .AddS3Services()
     .AddHangFireStorage();
 
 builder.Services.AddHealthChecks()
@@ -23,14 +25,19 @@ var app = builder.Build();
 
 // TODO: protect this
 app.UseHangFireDashboard();
+app.UseHttpsRedirection();
+app.UseCors(static builder =>
+    builder.AllowAnyMethod()
+        .AllowAnyHeader()
+        .AllowAnyOrigin());
+app.MapOpenApi();
+app.MapScalarApiReference();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
-    app.MapScalarApiReference();
     app.UseDeveloperExceptionPage();
     app.UseMigrationsEndPoint();
-    
+
     app.MapHealthChecks("/health");
 
     app.MapHealthChecks("/alive", new HealthCheckOptions
@@ -38,6 +45,8 @@ if (app.Environment.IsDevelopment())
         Predicate = r => r.Tags.Contains("live")
     });
 }
+
+app.MapEndpoints(typeof(Program).Assembly);
 
 app.UseHttpsRedirection();
 app.Run();

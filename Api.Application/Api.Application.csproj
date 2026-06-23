@@ -9,6 +9,8 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Api.Domain\Api.Domain.csproj" />
+      <ProjectReference Include="..\Shared.Abstractions\Shared.Abstractions.csproj" />
+      <ProjectReference Include="..\Shared.Contracts\Shared.Contracts.csproj" />
     </ItemGroup>
 
     <ItemGroup>
