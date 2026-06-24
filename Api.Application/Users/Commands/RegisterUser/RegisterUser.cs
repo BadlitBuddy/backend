@@ -33,7 +33,7 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, s
         var userPublicGuid = Guid.CreateVersion7();
 
         var domainUser = new User(userGuid, userPublicGuid, request.Email, request.FirstName, request.LastName);
-        _dbContext.Users.Add(domainUser);
+        _dbContext.DomainUsers.Add(domainUser);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         var (result, userId) = await _identityService.CreateUserAsync(userGuid, userPublicGuid, request.FirstName,
@@ -41,7 +41,7 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, s
 
         if (!result.Succeeded)
         {
-            _dbContext.Users.Remove(domainUser);
+            _dbContext.DomainUsers.Remove(domainUser);
             await _dbContext.SaveChangesAsync(cancellationToken);
             throw new InvalidOperationException("An error occurred while registering the user");
         }
