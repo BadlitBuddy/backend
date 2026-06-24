@@ -1,6 +1,5 @@
 using Api.Application.Common.Interfaces;
 using Api.Domain.Entities;
-using Ardalis.GuardClauses;
 
 namespace Api.Application.Users.Commands.RegisterUser;
 
@@ -22,30 +21,31 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, s
         _dbContext = dbContext;
         _identityService = identityService;
     }
-    
+
     public async Task<string> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
     {
-        
         if (await _identityService.DoesUserExistByEmailAsync(request.Email))
         {
-            throw new NotFoundException("Email","User");
+            throw new NotFoundException("Email", "User");
         }
-        
+
         var userGuid = Guid.CreateVersion7();
-        var userPublicGuid  = Guid.CreateVersion7();
-        
-        var (result, userId) = await _identityService.CreateUserAsync(userGuid, userPublicGuid, request.FirstName, request.LastName, request.Email, request.Password);
+        var userPublicGuid = Guid.CreateVersion7();
+
+        var domainUser = new User(userGuid, userPublicGuid, request.Email, request.FirstName, request.LastName);
+        _dbContext.DomainUsers.Add(domainUser);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        var (result, userId) = await _identityService.CreateUserAsync(userGuid, userPublicGuid, request.FirstName,
+            request.LastName, request.Email, request.Password);
 
         if (!result.Succeeded)
         {
-            throw new ValidationException("Could not create user, please try again.");
+            _dbContext.DomainUsers.Remove(domainUser);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            throw new InvalidOperationException("An error occurred while registering the user");
         }
-            
-        var domainUser = new User(userGuid, userPublicGuid, request.Email, request.FirstName, request.LastName);
-        _dbContext.Users.Add(domainUser);
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
-            
         return domainUser.Id.ToString();
     }
 }

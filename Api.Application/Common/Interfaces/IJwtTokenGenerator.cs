@@ -1,6 +1,6 @@
 namespace Api.Application.Common.Interfaces;
 
-public record UserClaimsDto(Guid id, Guid publicId, string? email);
+public record UserClaimsDto(Guid Id, Guid PublicId, string? Email);
 
 public interface IJwtTokenGenerator
 {

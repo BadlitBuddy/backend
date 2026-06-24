@@ -33,13 +33,15 @@ public class IdentityService : IIdentityService
         return await _userManager.Users.AnyAsync(u => u.Email == email);
     }
 
-    public async Task<(Result Result, string UserId)> CreateUserAsync(Guid userId, Guid publicId, string firstName, string? lastName, string email, string password)
+    public async Task<(Result Result, string UserId)> CreateUserAsync(Guid userId, Guid publicId, string firstName,
+        string? lastName, string email, string password)
     {
         var user = new ApplicationUser
         {
             Id = userId,
             PublicId = publicId,
             Email = email,
+            UserName = email,
             FirstName = firstName,
             LastName = lastName
         };
