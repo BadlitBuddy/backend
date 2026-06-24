@@ -1,9 +1,10 @@
 using Api.Application.Common.Interfaces;
+using Api.Application.Common.Models;
 using Api.Domain.Entities;
 
 namespace Api.Application.Users.Commands.RegisterUser;
 
-public class RegisterUserCommand : IRequest<string>
+public class RegisterUserCommand : IRequest<Result<string>>
 {
     public required string Email { get; set; }
     public required string Password { get; set; }
@@ -11,7 +12,7 @@ public class RegisterUserCommand : IRequest<string>
     public required string? LastName { get; set; }
 }
 
-public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, string>
+public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, Result<string>>
 {
     private readonly IApplicationDbContext _dbContext;
     private readonly IIdentityService _identityService;
@@ -22,11 +23,13 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, s
         _identityService = identityService;
     }
 
-    public async Task<string> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
+    public async Task<Result<string>> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
     {
         if (await _identityService.DoesUserExistByEmailAsync(request.Email))
         {
-            throw new NotFoundException("Email", "User");
+            return Result<string>.Failure([
+                $"Failed to create user with email:  {request.Email}, Please try a different email."
+            ]);
         }
 
         var userGuid = Guid.CreateVersion7();
@@ -43,9 +46,9 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, s
         {
             _dbContext.DomainUsers.Remove(domainUser);
             await _dbContext.SaveChangesAsync(cancellationToken);
-            throw new InvalidOperationException("An error occurred while registering the user");
+            return Result<string>.Failure(result.Errors);
         }
 
-        return domainUser.Id.ToString();
+        return Result<string>.Success(userGuid.ToString());
     }
 }
