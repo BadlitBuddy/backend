@@ -22,7 +22,7 @@ public class JwtTokenGenerator : IJwtTokenGenerator
     
     public async Task<string> CreateAccessTokenAsync(UserClaimsDto userClaimsDto)
     {
-        var user = await _userManager.FindByIdAsync(userClaimsDto.id.ToString());
+        var user = await _userManager.FindByIdAsync(userClaimsDto.Id.ToString());
         if (user == null)
         {
             throw new UnauthorizedAccessException();
