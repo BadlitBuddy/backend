@@ -1,6 +1,7 @@
 using Api.Application.Common.Interfaces;
 using Api.Application.Users.Commands.RegisterUser;
 using Api.Infrastructure.Identity;
+using Api.Web.EndpointResponseDtos;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -22,12 +23,18 @@ public class Users : IEndpointGroup
 
     [EndpointSummary("Register")]
     [EndpointDescription("Registers a new user")]
-    public static async Task<Ok<string>> Register(
+    public static async Task<Results<ProblemHttpResult, Ok<RegisterUserResponse>>> Register(
         ISender sender, RegisterUserCommand command
     )
     {
-        var userId = await sender.Send(command);
-        return TypedResults.Ok(userId);
+        var result = await sender.Send(command);
+
+        if (result.IsFailure)
+        {
+            return result.ToProblemResult();
+        }
+
+        return TypedResults.Ok(new RegisterUserResponse(result.Value!));
     }
 
     [EndpointSummary("Login")]
