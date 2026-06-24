@@ -1,14 +1,16 @@
-﻿using System.Reflection;
+using System.Reflection;
 using Api.Application.Common.Interfaces;
 using Api.Infrastructure.Identity;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
 namespace Api.Infrastructure;
 
-public class ApplicationDbContext : DbContext, IApplicationDbContext
+public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>, IApplicationDbContext
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) {}
     
-    public DbSet<User> Users => Set<User>();
+    public DbSet<User> DomainUsers => Set<User>();
     public DbSet<Organization> Organizations =>  Set<Organization>();
     public DbSet<OrganizationSubscription> OrganizationSubscriptions =>  Set<OrganizationSubscription>();
     public DbSet<SubscriptionPlan> SubscriptionPlans =>  Set<SubscriptionPlan>();
