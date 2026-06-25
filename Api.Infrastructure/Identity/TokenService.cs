@@ -71,6 +71,7 @@ public class TokenService : ITokenService
 
         existingRefreshToken.RevokedAt = DateTimeOffset.UtcNow;
         existingRefreshToken.ReplacedByToken = newRefreshToken.Token;
+        existingRefreshToken.IsActive = false;
         await _dbContext.SaveChangesAsync();
 
         return new GeneratedTokenDto(accessToken, newRefreshToken.Token);
@@ -85,7 +86,7 @@ public class TokenService : ITokenService
             throw new UnauthorizedAccessException();
         }
 
-        token.RevokedAt = DateTime.UtcNow;
+        token.RevokedAt = DateTimeOffset.UtcNow;
         token.ReplacedByToken = null;
         token.IsActive = false;
 
