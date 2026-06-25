@@ -38,7 +38,7 @@ public class AuditingAndSoftDeleteInterceptor : SaveChangesInterceptor
 
         var now = DateTimeOffset.UtcNow;
         Guid? userId = _currentUserService.Id != null ? new Guid(_currentUserService.Id) : null;
-        var userName = _currentUserService.Email;
+        string? userName = _currentUserService.Email ?? null;
 
         foreach (var entry in context.ChangeTracker.Entries())
         {

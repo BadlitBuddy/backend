@@ -13,7 +13,7 @@ public class CurrentUserService : IUser
     }
 
     public string? Id => _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
-    // TODO: Implement this
-    public string? Email { get; }
+    public string? PublicId => _httpContextAccessor.HttpContext?.User?.FindFirstValue("public_id");
+    public string? Email => _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.Email);
     public List<string>? Roles => _httpContextAccessor.HttpContext?.User?.FindAll(ClaimTypes.Role).Select(x => x.Value).ToList();
 }

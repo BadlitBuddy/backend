@@ -1,16 +1,23 @@
 using Api.Application.Common.Interfaces;
 using Api.Application.Users.Commands.RegisterUser;
 using Api.Infrastructure.Identity;
-using Api.Web.EndpointResponseDtos;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Web.Endpoints;
 
+public record RegisterUserResponse(string UserId);
+
 public record LoginRequestDto(string Email, string Password);
 
-public record LoginResponseDto(string Token);
+public record LoginResponseDto(string AccessToken, string RefreshToken);
+
+public record RefreshTokenRequestDto(string RefreshToken);
+
+public record LogoutRequestDto(string RefreshToken);
+
+public record LogoutResponseDto(string Message);
 
 public class Users : IEndpointGroup
 {
@@ -18,7 +25,8 @@ public class Users : IEndpointGroup
     {
         groupBuilder.MapPost("register", Register);
         groupBuilder.MapPost("login", Login);
-        groupBuilder.MapPost(Logout, "logout").RequireAuthorization();
+        groupBuilder.MapPost("refresh", Refresh).RequireAuthorization();
+        groupBuilder.MapPost("logout", Logout).RequireAuthorization();
     }
 
     [EndpointSummary("Register")]
@@ -42,15 +50,15 @@ public class Users : IEndpointGroup
     public static async Task<Results<Ok<LoginResponseDto>, BadRequest, InternalServerError, UnauthorizedHttpResult>>
         Login(
             [FromBody] LoginRequestDto loginRequestDto, SignInManager<ApplicationUser> signInManager,
-            UserManager<ApplicationUser> userManager, IJwtTokenGenerator tokenGenerator
+            UserManager<ApplicationUser> userManager, ITokenService tokenService
         )
     {
         try
         {
             var user = await userManager.FindByEmailAsync(loginRequestDto.Email);
-            if (user == null)
+            if (user == null || !await userManager.CheckPasswordAsync(user, loginRequestDto.Password))
             {
-                return TypedResults.BadRequest();
+                return TypedResults.Unauthorized();
             }
 
             var signInResult = await signInManager.CheckPasswordSignInAsync(user, loginRequestDto.Password, false);
@@ -59,12 +67,9 @@ public class Users : IEndpointGroup
                 return TypedResults.Unauthorized();
             }
 
-            var userClaimsDto = new UserClaimsDto(user.Id, user.PublicId, user.Email);
+            var tokens = await tokenService.CreateTokensAsync(user.Id.ToString());
 
-            var accessToken =
-                await tokenGenerator.CreateAccessTokenAsync(userClaimsDto);
-
-            var response = new LoginResponseDto(accessToken);
+            var response = new LoginResponseDto(tokens.AccessToken, tokens.RefreshToken);
 
             return TypedResults.Ok(response);
         }
@@ -74,14 +79,49 @@ public class Users : IEndpointGroup
         }
     }
 
+    [EndpointSummary("Refresh")]
+    [EndpointDescription("Gets a refresh token")]
+    public static async Task<Results<Ok<GeneratedTokenDto>, UnauthorizedHttpResult>> Refresh(
+        ITokenService tokenService, IUser currentUserService, [FromBody] RefreshTokenRequestDto request)
+    {
+        try
+        {
+            var userId = currentUserService.Id;
+            if (string.IsNullOrWhiteSpace(userId)) return TypedResults.Unauthorized();
+
+            var response = await tokenService.RefreshTokenAsync(request.RefreshToken, new Guid(userId));
+
+            return TypedResults.Ok(response);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return TypedResults.Unauthorized();
+        }
+    }
+
     [EndpointSummary("Log out")]
     [EndpointDescription("Logs out the current user by clearing the authentication cookie.")]
-    public static async Task<Results<Ok, UnauthorizedHttpResult>> Logout(SignInManager<ApplicationUser> signInManager,
-        [FromBody] object empty)
+    public static async Task<Results<Ok<LogoutResponseDto>, UnauthorizedHttpResult, InternalServerError>> Logout(
+        SignInManager<ApplicationUser> signInManager,
+        ITokenService tokenService, IUser currentUserService,
+        [FromBody] LogoutRequestDto request)
     {
-        if (empty == null) return TypedResults.Unauthorized();
+        try
+        {
+            var userId = currentUserService.Id;
+            if (string.IsNullOrWhiteSpace(userId)) return TypedResults.Unauthorized();
 
-        await signInManager.SignOutAsync();
-        return TypedResults.Ok();
+            await tokenService.RevokeAsync(request.RefreshToken, new Guid(userId));
+
+            return TypedResults.Ok(new LogoutResponseDto("Logged Out"));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return TypedResults.Unauthorized();
+        }
+        catch (Exception)
+        {
+            return TypedResults.InternalServerError();
+        }
     }
 }

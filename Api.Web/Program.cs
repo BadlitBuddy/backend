@@ -23,7 +23,6 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 
-// TODO: protect this
 app.UseHangFireDashboard();
 app.UseHttpsRedirection();
 app.UseCors(static builder =>
@@ -45,6 +44,9 @@ if (app.Environment.IsDevelopment())
         Predicate = r => r.Tags.Contains("live")
     });
 }
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapEndpoints(typeof(Program).Assembly);
 
