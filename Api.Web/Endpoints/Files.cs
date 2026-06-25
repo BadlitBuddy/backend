@@ -11,7 +11,7 @@ public class Files : IEndpointGroup
     {
         groupBuilder.RequireAuthorization();
 
-        groupBuilder.MapPost("Upload", Upload);
+        groupBuilder.MapPost("uploads", Upload);
     }
 
     [EndpointSummary("Upload")]
