@@ -7,6 +7,8 @@ public class Files : IEndpointGroup
 {
     public static void Map(RouteGroupBuilder groupBuilder)
     {
+        groupBuilder.RequireAuthorization();
+        
         groupBuilder.MapPost("Upload", Upload);
     }
 
