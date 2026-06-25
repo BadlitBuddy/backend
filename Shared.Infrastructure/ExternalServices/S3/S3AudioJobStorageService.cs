@@ -2,6 +2,7 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NanoidDotNet;
 using Shared.Abstractions.ExternalServices.S3;
 
 namespace Shared.Infrastructure.ExternalServices.S3;
@@ -47,7 +48,8 @@ public class S3AudioJobStorageService : IAudioJobStorageService
             throw new ArgumentException("Only .wav files are supported.");
         }
 
-        var objectKey = $"{userId}/{Guid.CreateVersion7()}-{Path.GetFileName(originalFileName)}";
+        var shortId = await Nanoid.GenerateAsync(size: 10);
+        var objectKey = $"{userId}/unprocessed/{shortId}-{Path.GetFileName(originalFileName)}";
         var request = new GetPreSignedUrlRequest()
         {
             BucketName = _options.Value.BucketName,
