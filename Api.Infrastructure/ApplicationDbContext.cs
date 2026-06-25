@@ -8,18 +8,21 @@ namespace Api.Infrastructure;
 
 public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>, IApplicationDbContext
 {
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) {}
-    
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
+    {
+    }
+
     public DbSet<User> DomainUsers => Set<User>();
-    public DbSet<Organization> Organizations =>  Set<Organization>();
-    public DbSet<OrganizationSubscription> OrganizationSubscriptions =>  Set<OrganizationSubscription>();
-    public DbSet<SubscriptionPlan> SubscriptionPlans =>  Set<SubscriptionPlan>();
-    public DbSet<TranscriptionJob> TranscriptionJobs =>  Set<TranscriptionJob>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<Organization> Organizations => Set<Organization>();
+    public DbSet<OrganizationSubscription> OrganizationSubscriptions => Set<OrganizationSubscription>();
+    public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
+    public DbSet<TranscriptionJob> TranscriptionJobs => Set<TranscriptionJob>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        
+
         modelBuilder.Entity<ApplicationUser>().Property(u => u.Id).ValueGeneratedNever();
         // 1-1 shared PK: AspNetUsers.Id == Users.Id
         modelBuilder.Entity<ApplicationUser>()
@@ -27,7 +30,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             .WithOne()
             .HasForeignKey<ApplicationUser>(a => a.Id)
             .OnDelete(DeleteBehavior.Cascade);
-        
+
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
     }
 }
