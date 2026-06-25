@@ -98,9 +98,9 @@ public class TokenService : ITokenService
 
         var claims = new List<Claim>
         {
-            new(JwtRegisteredClaimNames.Sub, user.PublicId.ToString()),
+            new("public_id", user.PublicId.ToString()),
             new(JwtRegisteredClaimNames.Email, user.Email!),
-            new(ClaimTypes.NameIdentifier, user.Id.ToString())
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString())
         };
 
         claims.AddRange(
@@ -133,6 +133,7 @@ public class TokenService : ITokenService
         var raw = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
         var entry = new RefreshToken
         {
+            PublicId = Guid.CreateVersion7().ToString(),
             Token = raw,
             UserId = user.Id,
             ExpiresAt = DateTime.UtcNow.AddDays(RefreshDays)
