@@ -2,6 +2,7 @@ using Api.Application.Files.Commands.UpdateFileStatus;
 using Api.Application.Files.Queries.GetUploadPresignedUrl;
 using Api.Domain.Enums;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Web.Endpoints;
 
@@ -14,13 +15,13 @@ public class Files : IEndpointGroup
         groupBuilder.RequireAuthorization();
 
         groupBuilder.MapPost(Upload);
-        groupBuilder.MapPost("{objectKey}/status", UpdateStatus);
+        groupBuilder.MapPost("status", UpdateStatus);
     }
 
-    [EndpointSummary("Upload")]
-    [EndpointDescription("Get url to upload file")]
+    [EndpointSummary("Update Status")]
+    [EndpointDescription("Update the status of the file")]
     public static async Task<Results<ProblemHttpResult, Ok<UpdateFileStatusResponse>>> UpdateStatus(ISender sender,
-        string objectKey, UpdateStatusRequest request)
+        [FromQuery] string objectKey, UpdateStatusRequest request)
     {
         var result = await sender.Send(new UpdateFileStatusCommand
         {
