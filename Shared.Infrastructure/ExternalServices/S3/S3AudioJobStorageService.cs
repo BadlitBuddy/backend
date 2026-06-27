@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Microsoft.Extensions.Logging;
@@ -35,6 +36,83 @@ public class S3AudioJobStorageService : IAudioJobStorageService
         catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
             _logger.LogCritical("Target S3 bucket {BucketName} does not exist.", _options.Value.BucketName);
+            return false;
+        }
+    }
+
+    public async Task<bool> IsWhisperCompatibleWavAsync(string fileKey, long? maxSizeBytes = 100L * 1024 * 1024,
+        CancellationToken cancellationToken = default)
+    {
+        if (maxSizeBytes.HasValue)
+        {
+            var metaReq = new GetObjectMetadataRequest
+            {
+                BucketName = _options.Value.BucketName,
+                Key = fileKey
+            };
+
+            GetObjectMetadataResponse meta;
+            try
+            {
+                meta = await _s3Client.GetObjectMetadataAsync(metaReq, cancellationToken);
+            }
+            catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return false;
+            }
+
+            if (meta.ContentLength > maxSizeBytes.Value)
+            {
+                return false;
+            }
+        }
+
+        try
+        {
+            var req = new GetObjectRequest
+            {
+                BucketName = _options.Value.BucketName,
+                Key = fileKey,
+                ByteRange = new ByteRange(0, 511)
+            };
+
+            using var resp = await _s3Client.GetObjectAsync(req, cancellationToken);
+            await using var stream = resp.ResponseStream;
+
+            using var br = new BinaryReader(stream, System.Text.Encoding.ASCII, leaveOpen: false);
+
+            if (new string(br.ReadChars(4)) != "RIFF") return false;
+            br.ReadUInt32();
+            if (new string(br.ReadChars(4)) != "WAVE") return false;
+
+            while (stream.Position < stream.Length - 8)
+            {
+                string chunkId = new string(br.ReadChars(4));
+                uint chunkSize = br.ReadUInt32();
+                long nextChunk = stream.Position + chunkSize;
+
+                if (chunkId == "fmt ")
+                {
+                    ushort formatTag = br.ReadUInt16();
+                    ushort channels = br.ReadUInt16();
+                    uint sampleRate = br.ReadUInt32();
+                    br.ReadUInt32();
+                    br.ReadUInt16();
+                    ushort bitsPerSample = br.ReadUInt16();
+
+                    return formatTag == 1 // PCM
+                           && channels == 1 // mono
+                           && sampleRate == 16000 // 16 kHz
+                           && bitsPerSample == 16; // 16-bit
+                }
+
+                stream.Position = nextChunk;
+            }
+
+            return true;
+        }
+        catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
             return false;
         }
     }
