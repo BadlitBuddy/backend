@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Multi-Launch: TranscriptionAppDev" type="com.intellij.execution.configurations.multilaunch" factoryName="MultiLaunchConfiguration">
+  <configuration default="false" name="Multi-Launch: DevWithS3Poller" type="com.intellij.execution.configurations.multilaunch" factoryName="MultiLaunchConfiguration">
     <rows>
       <ExecutableRowSnapshot>
         <option name="condition">
