@@ -62,7 +62,8 @@ public class S3AudioJobStorageService : IAudioJobStorageService
         var response = await _s3Client.GetPreSignedURLAsync(request);
         return new UploadUrlDto
         {
-            Url = response
+            Url = response,
+            ObjectKey = objectKey
         };
     }
 
