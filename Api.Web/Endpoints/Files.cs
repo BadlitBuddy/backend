@@ -5,8 +5,6 @@ using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace Api.Web.Endpoints;
 
-public record UploadResponseDto(string PresignedUrl, string ObjectKey);
-
 public record UpdateStatusRequest(string? ProcessedObjectKey, TranscriptionJobStatus TranscriptionJobStatus);
 
 public class Files : IEndpointGroup
@@ -40,7 +38,7 @@ public class Files : IEndpointGroup
 
     [EndpointSummary("Upload")]
     [EndpointDescription("Get url to upload file")]
-    public static async Task<Results<ProblemHttpResult, Ok<UploadResponseDto>>> Upload(ISender sender,
+    public static async Task<Results<ProblemHttpResult, Ok<UploadUrlDto>>> Upload(ISender sender,
         GetUploadPresignedUrlQuery query)
     {
         var result = await sender.Send(query);
@@ -50,6 +48,6 @@ public class Files : IEndpointGroup
             return result.ToProblemResult();
         }
 
-        return TypedResults.Ok(new UploadResponseDto(result.Value!.Url, result.Value.ObjectKey));
+        return TypedResults.Ok(result.Value);
     }
 }
