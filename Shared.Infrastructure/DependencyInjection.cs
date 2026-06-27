@@ -7,7 +7,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Shared.Abstractions.ExternalServices.S3;
+using Shared.Abstractions.Jobs;
 using Shared.Infrastructure.ExternalServices.S3;
+using Shared.Infrastructure.Jobs;
 using StackExchange.Redis;
 
 namespace Shared.Infrastructure;
@@ -80,7 +82,8 @@ public static class DependencyInjection
                 DeletedListSize = 1000
             });
         });
-        
+
+        services.AddSingleton<ITranscriptionJobScheduler, HangfireTranscriptionJobScheduler>();
         return services;
     }
     
