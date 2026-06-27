@@ -21,7 +21,7 @@ public class TranscriptionJob : ITranscriptionJob
         _logger = logger;
     }
     
-    public async Task TranscribeFileAsync(string bucketName, string fileKey, CancellationToken cancellationToken)
+    public async Task TranscribeFileAsync(string fileKey, CancellationToken cancellationToken)
     {
         string filePath = Path.Combine(AppContext.BaseDirectory, "MediaFiles","ToProcess", Path.GetFileName(fileKey));
         

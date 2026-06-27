@@ -2,5 +2,5 @@ namespace Shared.Abstractions.Jobs;
 
 public interface ITranscriptionJob
 {
-    public Task TranscribeFileAsync(string bucketName, string fileKey, CancellationToken cancellationToken);
+    public Task TranscribeFileAsync(string fileKey, CancellationToken cancellationToken);
 }
