@@ -46,7 +46,7 @@ public class S3PollerWorker : BackgroundService
                         foundNewJobs = true;
                         _logger.LogInformation("Processing job: {job}", job.FileKey);
                         _backgroundJobClient.Enqueue<ITranscriptionJob>(jobService =>
-                            jobService.TranscribeFileAsync("word-scribe-test", job.FileKey, stoppingToken)
+                            jobService.TranscribeFileAsync(job.FileKey, stoppingToken)
                         );
                     }
                 }
