@@ -6,7 +6,7 @@ namespace Api.Domain.Common;
 public abstract class BaseEntity<T> : IBaseEntity
 {
     public T Id { get; set; } = default!;
-    public string PublicId { get; set; } = null!;
+    public string PublicId { get; set; } = Guid.CreateVersion7().ToString();
 
     public bool IsActive { get; set; } = true;
 
