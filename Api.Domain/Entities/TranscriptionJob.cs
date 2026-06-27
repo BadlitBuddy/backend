@@ -1,3 +1,5 @@
+using Api.Domain.Events;
+
 namespace Api.Domain.Entities;
 
 public class TranscriptionJob : BaseAuditableEntity<int>
@@ -16,6 +18,7 @@ public class TranscriptionJob : BaseAuditableEntity<int>
         }
 
         JobStatus = TranscriptionJobStatus.Uploaded;
+        AddDomainEvent(new TranscriptionJobUploadedEvent(this));
     }
 
     public void MarkAsProcessing()

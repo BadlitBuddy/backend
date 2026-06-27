@@ -10,8 +10,12 @@ public abstract class BaseEntityConfiguration<TEntity, TKey>
     {
         builder.HasKey(e => e.Id);
 
+
         builder.Property(e => e.PublicId)
             .HasMaxLength(50);
+
+        builder.Ignore(e => e.DomainEvents);
+        builder.Ignore("_domainEvents");
 
         builder.Property(e => e.DeletedById);
         builder.Property(e => e.DeletedBy)
