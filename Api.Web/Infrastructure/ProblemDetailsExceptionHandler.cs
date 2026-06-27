@@ -6,15 +6,24 @@ namespace Api.Web.Infrastructure;
 
 public class ProblemDetailsExceptionHandler : IExceptionHandler
 {
-    public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
+    private readonly IWebHostEnvironment _env;
+
+    public ProblemDetailsExceptionHandler(IWebHostEnvironment env)
+    {
+        _env = env;
+    }
+
+    public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception,
+        CancellationToken cancellationToken)
     {
         var (statusCode, problemDetails) = exception switch
         {
-            ValidationException ve => (StatusCodes.Status400BadRequest, (ProblemDetails)new ValidationProblemDetails(ve.Errors)
-            {
-                Status = StatusCodes.Status400BadRequest,
-                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.1"
-            }),
+            ValidationException ve => (StatusCodes.Status400BadRequest,
+                (ProblemDetails)new ValidationProblemDetails(ve.Errors)
+                {
+                    Status = StatusCodes.Status400BadRequest,
+                    Type = "https://tools.ietf.org/html/rfc9110#section-15.5.1"
+                }),
             NotFoundException ne => (StatusCodes.Status404NotFound, new ProblemDetails
             {
                 Status = StatusCodes.Status404NotFound,
@@ -34,10 +43,18 @@ public class ProblemDetailsExceptionHandler : IExceptionHandler
                 Title = "Forbidden",
                 Type = "https://tools.ietf.org/html/rfc9110#section-15.5.4"
             }),
-            _ => (-1, null)
-        };
+            _ => (StatusCodes.Status500InternalServerError, new ProblemDetails
+            {
+                Status = StatusCodes.Status500InternalServerError,
+                Title = "An error occurred while processing your request.",
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.6.1",
 
-        if (problemDetails is null) return false;
+                Detail = _env.IsDevelopment() ? exception.Message : "Internal Server Error.",
+                Extensions = _env.IsDevelopment()
+                    ? new Dictionary<string, object?> { { "stackTrace", exception.StackTrace } }
+                    : new Dictionary<string, object?>()
+            })
+        };
 
         httpContext.Response.StatusCode = statusCode;
         await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
