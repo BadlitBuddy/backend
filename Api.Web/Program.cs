@@ -16,7 +16,8 @@ builder.Services
     .AddConnectionStringsConfiguration(builder.Configuration)
     .AddS3Configuration(builder.Configuration)
     .AddS3Services()
-    .AddHangFireStorage();
+    .AddHangFireStorage()
+    .AddRedisSubscriberService();
 
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
