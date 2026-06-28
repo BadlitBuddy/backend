@@ -10,7 +10,8 @@ builder.Services
     .AddS3Configuration(builder.Configuration)
     .AddS3Services()
     .AddHangFireStorage()
-    .AddHangFireServerWorker();
+    .AddHangFireServerWorker()
+    .AddRedisPublisherService();
 
 builder.Services.AddSingleton<ITranscriptionService, WhisperTranscriptionService>();
 
