@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Shared.Abstractions.ExternalServices.S3;
 using Shared.Abstractions.Jobs;
 using Shared.Abstractions.Services;
+using Shared.Contracts.Enums;
 
 namespace Shared.Infrastructure.Jobs;
 
@@ -12,16 +13,18 @@ public class TranscriptionJob : ITranscriptionJob
     private readonly IAudioJobStorageService _audioJobStorageService;
     private readonly ILogger<TranscriptionJob> _logger;
     private readonly IHostEnvironment _hostEnvironment;
+    private readonly IMessagePublisher _messagePublisher;
 
     public TranscriptionJob(
         ITranscriptionService transcriptionService, IAudioJobStorageService audioJobStorageService,
-        ILogger<TranscriptionJob> logger, IHostEnvironment hostEnvironment
+        ILogger<TranscriptionJob> logger, IHostEnvironment hostEnvironment, IMessagePublisher messagePublisher
     )
     {
         _transcriptionService = transcriptionService;
         _audioJobStorageService = audioJobStorageService;
         _logger = logger;
         _hostEnvironment = hostEnvironment;
+        _messagePublisher = messagePublisher;
     }
 
     public async Task TranscribeFileAsync(string fileKey, CancellationToken cancellationToken)
@@ -47,6 +50,8 @@ public class TranscriptionJob : ITranscriptionJob
         var parts = fileKey.Split('/');
         var userId = parts[0];
         var originalFileName = Path.ChangeExtension(parts[^1].Substring(11), ".txt");
+
+        var outputObjectKey = "";
 
         try
         {
@@ -81,11 +86,13 @@ public class TranscriptionJob : ITranscriptionJob
                              bufferSize: 4096,
                              useAsync: true))
             {
-                await _audioJobStorageService.UploadTranscriptionAsync(
+                var uploadResult = await _audioJobStorageService.UploadTranscriptionAsync(
                     userId,
                     originalFileName,
                     uploadStream,
                     cancellationToken);
+
+                outputObjectKey = uploadResult;
             }
 
             await _audioJobStorageService.DeleteAudioAsync(fileKey, cancellationToken);
@@ -100,6 +107,9 @@ public class TranscriptionJob : ITranscriptionJob
         {
             if (File.Exists(toProcessFilePath)) File.Delete(toProcessFilePath);
             if (File.Exists(outputFilePath)) File.Delete(outputFilePath);
+
+            await _messagePublisher.PublishAsync(MessageChannel.TranscriptionFinished,
+                new TranscriptionFinishedMessage(fileKey, outputObjectKey));
         }
     }
 }
