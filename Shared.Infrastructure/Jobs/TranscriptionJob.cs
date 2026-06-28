@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Shared.Abstractions.ExternalServices.S3;
 using Shared.Abstractions.Jobs;
@@ -10,55 +11,95 @@ public class TranscriptionJob : ITranscriptionJob
     private readonly ITranscriptionService _transcriptionService;
     private readonly IAudioJobStorageService _audioJobStorageService;
     private readonly ILogger<TranscriptionJob> _logger;
+    private readonly IHostEnvironment _hostEnvironment;
 
     public TranscriptionJob(
         ITranscriptionService transcriptionService, IAudioJobStorageService audioJobStorageService,
-        ILogger<TranscriptionJob> logger
+        ILogger<TranscriptionJob> logger, IHostEnvironment hostEnvironment
     )
     {
         _transcriptionService = transcriptionService;
         _audioJobStorageService = audioJobStorageService;
         _logger = logger;
+        _hostEnvironment = hostEnvironment;
     }
-    
+
     public async Task TranscribeFileAsync(string fileKey, CancellationToken cancellationToken)
     {
-        string filePath = Path.Combine(AppContext.BaseDirectory, "MediaFiles","ToProcess", Path.GetFileName(fileKey));
-        
+        var isValidFile =
+            await _audioJobStorageService.IsWhisperCompatibleWavAsync(fileKey, cancellationToken: cancellationToken);
+        if (!isValidFile)
+        {
+            _logger.LogWarning("File with key: {FileKey} is invalid", fileKey);
+            return;
+        }
+
+        string toProcessDir = Path.Combine(AppContext.BaseDirectory, "MediaFiles", "ToProcess");
+        string processedDir = Path.Combine(AppContext.BaseDirectory, "MediaFiles", "Processed");
+        Directory.CreateDirectory(toProcessDir);
+        Directory.CreateDirectory(processedDir);
+
+        string toProcessFilePath = Path.Combine(toProcessDir, Path.GetFileName(fileKey));
+
+        string outputFileName = Path.ChangeExtension(Path.GetFileName(fileKey), ".txt");
+        string outputFilePath = Path.Combine(processedDir, outputFileName);
+
+        var parts = fileKey.Split('/');
+        var userId = parts[0];
+        var originalFileName = Path.ChangeExtension(parts[^1].Substring(11), ".txt");
+
         try
         {
-            await Task.Delay(TimeSpan.FromSeconds(20), cancellationToken);
-            _logger.LogInformation("Starting Whisper transcription for: {FileKey}",fileKey);
+            _logger.LogInformation("Starting Whisper transcription for: {FileKey}", fileKey);
 
             await using (var s3Stream = await _audioJobStorageService.DownloadAudioAsync(fileKey, cancellationToken))
-            await using (var fileStream = File.Create(filePath))
+            await using (var fileStream = File.Create(toProcessFilePath))
             {
                 await s3Stream.CopyToAsync(fileStream, cancellationToken);
             }
 
-            await using (var stream = File.OpenRead(filePath))
+            await using (var stream = File.OpenRead(toProcessFilePath))
+            await using (var writer = new StreamWriter(outputFilePath, append: false))
             {
-                // await _transcriptionService.TranscribeAsync(stream, cancellationToken);
                 await foreach (var segment in _transcriptionService.TranscribeAsync(stream, cancellationToken))
                 {
-                    Console.WriteLine($"{segment.Start}->{segment.End}: {segment.Text}");
-                    // using var writer = new StreamWriter(outputPath, append: false);
-        
-                    // Write to the file immediately without buffering all segments in RAM
-                    // await writer.WriteLineAsync(line);
+                    var line = $"{segment.Start}->{segment.End}: {segment.Text}";
+                    if (_hostEnvironment.IsDevelopment())
+                    {
+                        _logger.LogInformation(line);
+                    }
+
+                    await writer.WriteLineAsync(line);
                 }
             }
+
+            await using (var uploadStream = new FileStream(
+                             outputFilePath,
+                             FileMode.Open,
+                             FileAccess.Read,
+                             FileShare.Read,
+                             bufferSize: 4096,
+                             useAsync: true))
+            {
+                await _audioJobStorageService.UploadTranscriptionAsync(
+                    userId,
+                    originalFileName,
+                    uploadStream,
+                    cancellationToken);
+            }
+
+            await _audioJobStorageService.DeleteAudioAsync(fileKey, cancellationToken);
+
+            _logger.LogInformation("Finished transcription and cleanup for: {FileKey}", fileKey);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to process {FileKey}",fileKey);
+            _logger.LogError(ex, "Failed to process {FileKey}", fileKey);
         }
         finally
         {
-            await _audioJobStorageService.DeleteAudioAsync(fileKey, cancellationToken);
-            if (File.Exists(filePath)) File.Delete(filePath);
-        
-            _logger.LogInformation("Finished transcription and cleanup for: {FileKey}",fileKey);
+            if (File.Exists(toProcessFilePath)) File.Delete(toProcessFilePath);
+            if (File.Exists(outputFilePath)) File.Delete(outputFilePath);
         }
     }
 }
