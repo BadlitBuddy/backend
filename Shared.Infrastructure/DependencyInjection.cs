@@ -8,8 +8,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Shared.Abstractions.ExternalServices.S3;
 using Shared.Abstractions.Jobs;
+using Shared.Abstractions.Services;
 using Shared.Infrastructure.ExternalServices.S3;
 using Shared.Infrastructure.Jobs;
+using Shared.Infrastructure.Services;
 using StackExchange.Redis;
 
 namespace Shared.Infrastructure;
@@ -101,5 +103,19 @@ public static class DependencyInjection
     {
         app.UseHangfireDashboard(); 
         return app;
+    }
+    
+    public static IServiceCollection AddRedisPublisherService(this IServiceCollection services)
+    {
+        services.AddSingleton<IMessagePublisher, RedisMessagePublisher>();
+        
+        return services;
+    }
+    
+    public static IServiceCollection AddRedisSubscriberService(this IServiceCollection services)
+    {
+        services.AddSingleton<IMessageSubscriber, RedisMessageSubscriber>();
+        
+        return services;
     }
 }
