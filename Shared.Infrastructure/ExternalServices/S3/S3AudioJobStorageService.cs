@@ -58,11 +58,14 @@ public class S3AudioJobStorageService : IAudioJobStorageService
             }
             catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
+                _logger.LogError("Failed to get {FileKey} while checking if file is whisper compatible", fileKey);
                 return false;
             }
 
             if (meta.ContentLength > maxSizeBytes.Value)
             {
+                _logger.LogError("Object: {FileKey} is greater than max size, file size is {FileSize}", fileKey,
+                    meta.ContentLength);
                 return false;
             }
         }
@@ -77,19 +80,23 @@ public class S3AudioJobStorageService : IAudioJobStorageService
             };
 
             using var resp = await _s3Client.GetObjectAsync(req, cancellationToken);
-            await using var stream = resp.ResponseStream;
 
-            using var br = new BinaryReader(stream, System.Text.Encoding.ASCII, leaveOpen: false);
+            using var memoryStream = new MemoryStream();
+            await resp.ResponseStream.CopyToAsync(memoryStream, cancellationToken);
+
+            memoryStream.Position = 0;
+
+            using var br = new BinaryReader(memoryStream, System.Text.Encoding.ASCII, leaveOpen: false);
 
             if (new string(br.ReadChars(4)) != "RIFF") return false;
             br.ReadUInt32();
             if (new string(br.ReadChars(4)) != "WAVE") return false;
 
-            while (stream.Position < stream.Length - 8)
+            while (memoryStream.Position < memoryStream.Length - 8)
             {
                 string chunkId = new string(br.ReadChars(4));
                 uint chunkSize = br.ReadUInt32();
-                long nextChunk = stream.Position + chunkSize;
+                long nextChunk = memoryStream.Position + chunkSize;
 
                 if (chunkId == "fmt ")
                 {
@@ -106,13 +113,14 @@ public class S3AudioJobStorageService : IAudioJobStorageService
                            && bitsPerSample == 16; // 16-bit
                 }
 
-                stream.Position = nextChunk;
+                memoryStream.Position = nextChunk;
             }
 
             return true;
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
+            _logger.LogError("Failed to get {FileKey} while checking if file is whisper compatible", fileKey);
             return false;
         }
     }
@@ -158,6 +166,34 @@ public class S3AudioJobStorageService : IAudioJobStorageService
         return response?.S3Objects == null
             ? []
             : response.S3Objects.Select(s3Obj => new AudioJobDto(s3Obj.Key, s3Obj.Size));
+    }
+
+    public async Task<string> UploadTranscriptionAsync(string userId, string originalFileName, Stream audioStream,
+        CancellationToken cancellationToken = default)
+    {
+        var fileExtension = Path.GetExtension(originalFileName);
+        if (!string.Equals(fileExtension, ".txt",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("Only .txt files can be uploaded.");
+        }
+
+        var shortId = await Nanoid.GenerateAsync(size: 10);
+        var objectKey = $"{userId}/processed/{shortId}-{Path.GetFileName(originalFileName)}";
+
+        var request = new PutObjectRequest
+        {
+            BucketName = _options.Value.BucketName,
+            Key = objectKey,
+            InputStream = audioStream,
+            ContentType = "audio/wav",
+            DisablePayloadSigning = true,
+            DisableDefaultChecksumValidation = true
+        };
+
+        await _s3Client.PutObjectAsync(request, cancellationToken);
+
+        return objectKey;
     }
 
     public async Task<Stream> DownloadAudioAsync(string fileKey, CancellationToken cancellationToken)
