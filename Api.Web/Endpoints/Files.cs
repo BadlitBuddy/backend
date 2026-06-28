@@ -3,6 +3,8 @@ using Api.Application.Files.Queries.GetUploadPresignedUrl;
 using Api.Domain.Enums;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Shared.Abstractions.Services;
+using Shared.Contracts.Enums;
 
 namespace Api.Web.Endpoints;
 
@@ -16,6 +18,36 @@ public class Files : IEndpointGroup
 
         groupBuilder.MapPost(Upload);
         groupBuilder.MapPost("status", UpdateStatus);
+        groupBuilder.MapGet("events", Events);
+    }
+
+
+    [EndpointSummary("Events")]
+    [EndpointDescription("Events related to the files")]
+    public static ServerSentEventsResult<TranscriptionFinishedMessage> Events(
+        [FromQuery] string unProcessedObjectKey,
+        IMessageSubscriber messageSubscriber,
+        CancellationToken cancellationToken)
+    {
+        return TypedResults.ServerSentEvents(
+            GetEvents(),
+            eventType: "transcription-finished");
+
+        async IAsyncEnumerable<TranscriptionFinishedMessage> GetEvents()
+        {
+            await foreach (var message in messageSubscriber
+                               .SubscribeAsync<TranscriptionFinishedMessage>(
+                                   MessageChannel.TranscriptionFinished)
+                               .WithCancellation(cancellationToken))
+            {
+                if (message.UnprocessedWavFileObjectKey != unProcessedObjectKey)
+                {
+                    continue;
+                }
+
+                yield return message;
+            }
+        }
     }
 
     [EndpointSummary("Update Status")]
