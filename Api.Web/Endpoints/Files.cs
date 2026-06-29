@@ -1,3 +1,4 @@
+using Api.Application.Common.Interfaces;
 using Api.Application.Files.Commands.UpdateFileStatus;
 using Api.Application.Files.Queries.GetUploadPresignedUrl;
 using Api.Domain.Enums;
@@ -26,7 +27,7 @@ public class Files : IEndpointGroup
     [EndpointDescription("Events related to the files")]
     public static ServerSentEventsResult<TranscriptionFinishedMessage> Events(
         [FromQuery] string unProcessedObjectKey,
-        IMessageSubscriber messageSubscriber,
+        IMessageSubscriber messageSubscriber, IUser currentUserService,
         CancellationToken cancellationToken)
     {
         return TypedResults.ServerSentEvents(
@@ -40,7 +41,7 @@ public class Files : IEndpointGroup
                                    MessageChannel.TranscriptionFinished)
                                .WithCancellation(cancellationToken))
             {
-                if (message.UnprocessedWavFileObjectKey != unProcessedObjectKey)
+                if (message.UnprocessedWavFileObjectKey != unProcessedObjectKey && message.UserId != currentUserService.Id)
                 {
                     continue;
                 }

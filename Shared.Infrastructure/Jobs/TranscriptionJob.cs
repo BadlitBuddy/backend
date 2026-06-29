@@ -109,7 +109,7 @@ public class TranscriptionJob : ITranscriptionJob
             if (File.Exists(outputFilePath)) File.Delete(outputFilePath);
 
             await _messagePublisher.PublishAsync(MessageChannel.TranscriptionFinished,
-                new TranscriptionFinishedMessage(fileKey, outputObjectKey));
+                new TranscriptionFinishedMessage(userId, fileKey, outputObjectKey));
         }
     }
 }
