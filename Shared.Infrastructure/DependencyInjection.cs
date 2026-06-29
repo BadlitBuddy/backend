@@ -8,9 +8,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Shared.Abstractions.ExternalServices.S3;
 using Shared.Abstractions.Jobs;
+using Shared.Abstractions.Repositories;
 using Shared.Abstractions.Services;
+using Shared.Infrastructure.Data;
 using Shared.Infrastructure.ExternalServices.S3;
 using Shared.Infrastructure.Jobs;
+using Shared.Infrastructure.Repositories;
 using Shared.Infrastructure.Services;
 using StackExchange.Redis;
 
@@ -115,6 +118,20 @@ public static class DependencyInjection
     public static IServiceCollection AddRedisSubscriberService(this IServiceCollection services)
     {
         services.AddSingleton<IMessageSubscriber, RedisMessageSubscriber>();
+        
+        return services;
+    }
+    
+    public static IServiceCollection AddDapperContext(this IServiceCollection services)
+    {
+        services.AddSingleton<DapperDbContext>();
+        
+        return services;
+    }
+    
+    public static IServiceCollection AddDataRepositories(this IServiceCollection services)
+    {
+        services.AddScoped<ITranscriptionJobRepository, TranscriptionJobRepository>();
         
         return services;
     }
