@@ -11,7 +11,9 @@ builder.Services
     .AddS3Services()
     .AddHangFireStorage()
     .AddHangFireServerWorker()
-    .AddRedisPublisherService();
+    .AddRedisPublisherService()
+    .AddDapperContext()
+    .AddDataRepositories();
 
 builder.Services.AddSingleton<ITranscriptionService, WhisperTranscriptionService>();
 
