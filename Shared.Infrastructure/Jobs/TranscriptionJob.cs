@@ -1,7 +1,9 @@
+using Api.Domain.Enums;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Shared.Abstractions.ExternalServices.S3;
 using Shared.Abstractions.Jobs;
+using Shared.Abstractions.Repositories;
 using Shared.Abstractions.Services;
 using Shared.Contracts.Enums;
 
@@ -14,10 +16,12 @@ public class TranscriptionJob : ITranscriptionJob
     private readonly ILogger<TranscriptionJob> _logger;
     private readonly IHostEnvironment _hostEnvironment;
     private readonly IMessagePublisher _messagePublisher;
+    private readonly ITranscriptionJobRepository _transcriptionJobRepository;
 
     public TranscriptionJob(
         ITranscriptionService transcriptionService, IAudioJobStorageService audioJobStorageService,
-        ILogger<TranscriptionJob> logger, IHostEnvironment hostEnvironment, IMessagePublisher messagePublisher
+        ILogger<TranscriptionJob> logger, IHostEnvironment hostEnvironment, IMessagePublisher messagePublisher, 
+        ITranscriptionJobRepository  transcriptionJobRepository
     )
     {
         _transcriptionService = transcriptionService;
@@ -25,6 +29,7 @@ public class TranscriptionJob : ITranscriptionJob
         _logger = logger;
         _hostEnvironment = hostEnvironment;
         _messagePublisher = messagePublisher;
+        _transcriptionJobRepository = transcriptionJobRepository;
     }
 
     public async Task TranscribeFileAsync(string fileKey, CancellationToken cancellationToken)
@@ -62,7 +67,9 @@ public class TranscriptionJob : ITranscriptionJob
             {
                 await s3Stream.CopyToAsync(fileStream, cancellationToken);
             }
-
+            
+            await _transcriptionJobRepository.UpdateStatusAsync(fileKey, outputObjectKey, TranscriptionJobStatus.Processing, new Guid(userId));
+            
             await using (var stream = File.OpenRead(toProcessFilePath))
             await using (var writer = new StreamWriter(outputFilePath, append: false))
             {
@@ -95,6 +102,7 @@ public class TranscriptionJob : ITranscriptionJob
                 outputObjectKey = uploadResult;
             }
 
+            await _transcriptionJobRepository.UpdateStatusAsync(fileKey, outputObjectKey, TranscriptionJobStatus.Completed, new Guid(userId));
             await _audioJobStorageService.DeleteAudioAsync(fileKey, cancellationToken);
 
             _logger.LogInformation("Finished transcription and cleanup for: {FileKey}", fileKey);
