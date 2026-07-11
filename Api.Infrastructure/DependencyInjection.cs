@@ -2,6 +2,7 @@ using System.Text;
 using Api.Application.Common.Interfaces;
 using Api.Infrastructure.Data.Interceptors;
 using Api.Infrastructure.Identity;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -60,6 +61,34 @@ public static class DependencyInjection
                     IssuerSigningKey = new SymmetricSecurityKey(encodedSecretKey),
                     ClockSkew = TimeSpan.Zero
                 };
+
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        if (context.Request.Cookies.TryGetValue("AuthToken", out var token))
+                        {
+                            context.Token = token;
+                        }
+
+                        return Task.CompletedTask;
+                    }
+                };
+            })
+            .AddCookie("ExternalCookie")
+            .AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
+            {
+                var clientId = builder.Configuration["Auth:Google:ClientId"];
+                var clientSecret = builder.Configuration["Auth:Google:ClientSecret"];
+                if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
+                {
+                    throw new InvalidOperationException(
+                        "Google Authentication requires both 'Auth:Google:ClientId' and 'Auth:Google:ClientSecret' to be configured in appsettings.json.");
+                }
+
+                options.ClientId = clientId;
+                options.ClientSecret = clientSecret;
+                options.SignInScheme = "ExternalCookie";
             });
 
         builder.Services.AddAuthorizationBuilder();
