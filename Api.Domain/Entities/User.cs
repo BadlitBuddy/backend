@@ -21,5 +21,6 @@ public class User : BaseAuditableEntity<Guid>
     public required string Email { get; set; }
     public required string FirstName { get; set; }
     public string? LastName { get; private set; }
+    public bool HasAcceptedTerms { get; set; }
     public List<TranscriptionJob> TranscriptionJobs { get; private set; } = [];
 }
