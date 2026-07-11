@@ -1,4 +1,5 @@
 using Api.Application.Common.Enums;
+using System.Diagnostics.CodeAnalysis; // 1. Add this namespace
 
 namespace Api.Application.Common.Models;
 
@@ -12,6 +13,8 @@ public class Result
     }
 
     public bool Succeeded { get; init; }
+
+    [MemberNotNullWhen(true, nameof(ErrorType))]
     public bool IsFailure => !Succeeded;
 
     public ErrorTypes? ErrorType { get; init; }
@@ -38,8 +41,14 @@ public class Result<T> : Result
 {
     public T? Value { get; }
 
-    internal Result(T? value, bool succeeded, IEnumerable<string> errors, ErrorTypes? errorType = null) : base(
-        succeeded, errors, errorType)
+    [MemberNotNullWhen(true, nameof(Value))]
+    public new bool Succeeded => base.Succeeded;
+
+    [MemberNotNullWhen(false, nameof(Value))]
+    public new bool IsFailure => base.IsFailure;
+
+    internal Result(T? value, bool succeeded, IEnumerable<string> errors, ErrorTypes? errorType = null)
+        : base(succeeded, errors, errorType)
     {
         Value = value;
     }
