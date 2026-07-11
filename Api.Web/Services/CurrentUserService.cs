@@ -12,6 +12,7 @@ public class CurrentUserService : IUser
         _httpContextAccessor = httpContextAccessor;
     }
 
+    public string? RefreshToken => _httpContextAccessor.HttpContext?.Request.Cookies["RefreshToken"];
     public string? Id => _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
     public string? PublicId => _httpContextAccessor.HttpContext?.User?.FindFirstValue("public_id");
     public string? Email => _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.Email);
