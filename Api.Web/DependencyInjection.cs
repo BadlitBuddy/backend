@@ -1,4 +1,5 @@
 using Api.Application.Common.Interfaces;
+using Api.Web.Configuration;
 using Api.Web.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,12 +18,22 @@ public static class DependencyInjection
         builder.Services.AddExceptionHandler<ProblemDetailsExceptionHandler>();
 
         builder.Services.Configure<ApiBehaviorOptions>(options =>
-        options.SuppressModelStateInvalidFilter = true);
+            options.SuppressModelStateInvalidFilter = true);
 
         builder.Services.AddEndpointsApiExplorer();
 
         builder.Services.AddOpenApi();
 
         builder.Services.AddCors();
+    }
+
+    public static void AddWebConfiguration(this IHostApplicationBuilder builder, IConfiguration configuration)
+    {
+        builder.Services.Configure<ClientOptions>(
+            configuration.GetSection("ClientOptions")
+        );
+        builder.Services.Configure<AuthOptions>(
+            configuration.GetSection("Auth")
+        );
     }
 }
