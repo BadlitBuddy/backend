@@ -25,9 +25,30 @@ public class Users : IEndpointGroup
         groupBuilder.MapPost("logout", Logout).RequireAuthorization();
     }
 
+    private static ProblemHttpResult BadRequestProblem(string detail, string title = "Bad Request") =>
+        TypedResults.Problem(
+            detail: detail,
+            title: title,
+            statusCode: StatusCodes.Status400BadRequest,
+            type: "https://tools.ietf.org/html/rfc9110#section-15.5.1");
+
+    private static ProblemHttpResult UnauthorizedProblem(string detail = "Authentication is required.") =>
+        TypedResults.Problem(
+            detail: detail,
+            title: "Unauthorized",
+            statusCode: StatusCodes.Status401Unauthorized,
+            type: "https://tools.ietf.org/html/rfc9110#section-15.5.2");
+
+    private static ProblemHttpResult InternalErrorProblem(string detail = "An unexpected error occurred.") =>
+        TypedResults.Problem(
+            detail: detail,
+            title: "Internal Server Error",
+            statusCode: StatusCodes.Status500InternalServerError,
+            type: "https://tools.ietf.org/html/rfc9110#section-15.6.1");
+
     [EndpointSummary("Register")]
     [EndpointDescription("Registers a user")]
-    public static Results<ChallengeHttpResult, InternalServerError> Register([FromQuery] bool hasAcceptedTerms)
+    public static Results<ChallengeHttpResult, ProblemHttpResult> Register([FromQuery] bool hasAcceptedTerms)
     {
         try
         {
@@ -37,23 +58,22 @@ public class Users : IEndpointGroup
         }
         catch (Exception)
         {
-            return TypedResults.InternalServerError();
+            return InternalErrorProblem("Failed to initiate registration.");
         }
     }
 
     [EndpointSummary("google callback")]
     [EndpointDescription("google auth callback")]
-    public static async Task<Results<RedirectHttpResult, BadRequest<string>, InternalServerError>>
-        RegisterGoogleCallback(
-            ISender sender, HttpContext context, UserManager<ApplicationUser> userManager, ITokenService tokenService,
-            IWebHostEnvironment environment, IOptions<ClientOptions> clientOptions)
+    public static async Task<Results<RedirectHttpResult, ProblemHttpResult>> RegisterGoogleCallback(
+        ISender sender, HttpContext context, UserManager<ApplicationUser> userManager, ITokenService tokenService,
+        IWebHostEnvironment environment, IOptions<ClientOptions> clientOptions)
     {
         try
         {
             var result = await context.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);
             if (!result.Succeeded || result.Principal == null)
             {
-                return TypedResults.BadRequest("Google authentication failed.");
+                return BadRequestProblem("Google authentication failed.");
             }
 
             var nameIdentifier = result.Principal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -63,9 +83,13 @@ public class Users : IEndpointGroup
             var hasAcceptedTerms = context.Request.Query["hasAcceptedTerms"].ToString()
                 .Equals("TRUE", StringComparison.InvariantCultureIgnoreCase);
 
-            if (string.IsNullOrEmpty(email)) return TypedResults.BadRequest("Email not provided by Google.");
+            if (string.IsNullOrEmpty(email))
+                return BadRequestProblem("Email not provided by Google.");
+
             if (!hasAcceptedTerms)
-                return TypedResults.BadRequest("You must accept the Terms of Service to register an account.");
+                return BadRequestProblem(
+                    "You must accept the Terms of Service to register an account.",
+                    title: "Terms Not Accepted");
 
             var user = await userManager.FindByEmailAsync(email);
             if (user == null)
@@ -82,31 +106,32 @@ public class Users : IEndpointGroup
                 var registerResult = await sender.Send(command);
                 if (registerResult.IsFailure)
                 {
-                    return TypedResults.InternalServerError();
+                    return InternalErrorProblem("Failed to register the user.");
                 }
             }
             else
             {
-                return TypedResults.BadRequest(
-                    "Cannot register user, an existing user with the same email already exists");
+                return BadRequestProblem(
+                    "Cannot register user, an existing user with the same email already exists.",
+                    title: "User Already Exists");
             }
 
             if (string.IsNullOrWhiteSpace(clientOptions.Value.ClientDomain))
             {
-                return TypedResults.InternalServerError();
+                return InternalErrorProblem("Client domain is not configured.");
             }
 
             return TypedResults.Redirect($"{clientOptions.Value.ClientDomain}/login");
         }
         catch (Exception)
         {
-            return TypedResults.InternalServerError();
+            return InternalErrorProblem();
         }
     }
 
     [EndpointSummary("Login")]
     [EndpointDescription("Logs in a user")]
-    public static Results<ChallengeHttpResult, InternalServerError> Login()
+    public static Results<ChallengeHttpResult, ProblemHttpResult> Login()
     {
         try
         {
@@ -115,13 +140,13 @@ public class Users : IEndpointGroup
         }
         catch (Exception)
         {
-            return TypedResults.InternalServerError();
+            return InternalErrorProblem("Failed to initiate login.");
         }
     }
 
     [EndpointSummary("google callback")]
     [EndpointDescription("google auth callback")]
-    public static async Task<Results<RedirectHttpResult, BadRequest<string>, InternalServerError>> LoginGoogleCallback(
+    public static async Task<Results<RedirectHttpResult, ProblemHttpResult>> LoginGoogleCallback(
         ISender sender, HttpContext context, UserManager<ApplicationUser> userManager, ITokenService tokenService,
         IWebHostEnvironment environment, IOptions<ClientOptions> clientOptions)
     {
@@ -130,16 +155,17 @@ public class Users : IEndpointGroup
             var result = await context.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);
             if (!result.Succeeded || result.Principal == null)
             {
-                return TypedResults.BadRequest("Google authentication failed.");
+                return BadRequestProblem("Google authentication failed.");
             }
 
             var email = result.Principal.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
-            if (string.IsNullOrEmpty(email)) return TypedResults.BadRequest("Email not provided by Google.");
+            if (string.IsNullOrEmpty(email))
+                return BadRequestProblem("Email not provided by Google.");
 
             var user = await userManager.FindByEmailAsync(email);
             if (user == null)
             {
-                return TypedResults.BadRequest("Please register an account first.");
+                return BadRequestProblem("Please register an account first.", title: "Account Not Found");
             }
 
             var tokens = await tokenService.CreateTokensAsync(user.Id.ToString());
@@ -161,28 +187,30 @@ public class Users : IEndpointGroup
 
             if (string.IsNullOrWhiteSpace(clientOptions.Value.ClientDomain))
             {
-                return TypedResults.InternalServerError();
+                return InternalErrorProblem("Client domain is not configured.");
             }
 
             return TypedResults.Redirect($"{clientOptions.Value.ClientDomain}/dashboard");
         }
         catch (Exception)
         {
-            return TypedResults.InternalServerError();
+            return InternalErrorProblem();
         }
     }
 
     [EndpointSummary("Refresh")]
     [EndpointDescription("Gets a refresh token")]
-    public static async Task<Results<Ok, UnauthorizedHttpResult>> Refresh(
+    public static async Task<Results<Ok, ProblemHttpResult>> Refresh(
         ITokenService tokenService, IUser currentUserService, HttpContext context)
     {
         try
         {
             var userId = currentUserService.Id;
             var refreshToken = currentUserService.RefreshToken;
-            if (string.IsNullOrWhiteSpace(userId)) return TypedResults.Unauthorized();
-            if (string.IsNullOrWhiteSpace(refreshToken)) return TypedResults.Unauthorized();
+            if (string.IsNullOrWhiteSpace(userId))
+                return UnauthorizedProblem();
+            if (string.IsNullOrWhiteSpace(refreshToken))
+                return UnauthorizedProblem();
 
             var response = await tokenService.RefreshTokenAsync(refreshToken, new Guid(userId));
 
@@ -206,13 +234,13 @@ public class Users : IEndpointGroup
         }
         catch (UnauthorizedAccessException)
         {
-            return TypedResults.Unauthorized();
+            return UnauthorizedProblem();
         }
     }
 
     [EndpointSummary("Log out")]
     [EndpointDescription("Logs out the current user by clearing the authentication cookie.")]
-    public static async Task<Results<Ok<LogoutResponseDto>, UnauthorizedHttpResult, InternalServerError>> Logout(
+    public static async Task<Results<Ok<LogoutResponseDto>, ProblemHttpResult>> Logout(
         SignInManager<ApplicationUser> signInManager,
         ITokenService tokenService, IUser currentUserService, HttpContext context)
     {
@@ -220,8 +248,10 @@ public class Users : IEndpointGroup
         {
             var userId = currentUserService.Id;
             var refreshToken = currentUserService.RefreshToken;
-            if (string.IsNullOrWhiteSpace(userId)) return TypedResults.Unauthorized();
-            if (string.IsNullOrWhiteSpace(refreshToken)) return TypedResults.Unauthorized();
+            if (string.IsNullOrWhiteSpace(userId))
+                return UnauthorizedProblem();
+            if (string.IsNullOrWhiteSpace(refreshToken))
+                return UnauthorizedProblem();
 
             await tokenService.RevokeAsync(refreshToken, new Guid(userId));
 
@@ -232,11 +262,11 @@ public class Users : IEndpointGroup
         }
         catch (UnauthorizedAccessException)
         {
-            return TypedResults.Unauthorized();
+            return UnauthorizedProblem();
         }
         catch (Exception)
         {
-            return TypedResults.InternalServerError();
+            return InternalErrorProblem();
         }
     }
 }
