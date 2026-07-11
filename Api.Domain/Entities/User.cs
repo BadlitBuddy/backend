@@ -4,18 +4,21 @@ namespace Api.Domain.Entities;
 
 public class User : BaseAuditableEntity<Guid>
 {
-    private User(){}
+    private User()
+    {
+    }
 
     [SetsRequiredMembers]
-    public User(Guid userId, Guid publicId, string email, string firstName, string? lastName)
+    public User(Guid userId, Guid publicId, string email, string firstName, string? lastName, bool hasAcceptedTerms)
     {
         Id = userId;
         PublicId = publicId.ToString();
         Email = email;
         FirstName = firstName;
         LastName = lastName;
+        HasAcceptedTerms = hasAcceptedTerms;
     }
-    
+
     public int? OrganizationId { get; private set; }
     public Organization? Organization { get; private set; }
     public required string Email { get; set; }

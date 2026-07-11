@@ -43,7 +43,8 @@ public class IdentityService : IIdentityService
             Email = email,
             UserName = email,
             FirstName = firstName,
-            LastName = lastName
+            LastName = lastName,
+            HasAcceptedTerms = true
         };
 
         var result = await _userManager.CreateAsync(user, password);

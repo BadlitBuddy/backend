@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
 namespace Api.Web.Endpoints;
@@ -16,19 +17,22 @@ public class Users : IEndpointGroup
 {
     public static void Map(RouteGroupBuilder groupBuilder)
     {
+        groupBuilder.MapGet("register", Register);
+        groupBuilder.MapGet("auth/google-response-register", RegisterGoogleCallback);
         groupBuilder.MapGet("login", Login);
-        groupBuilder.MapGet("auth/google-response", GoogleCallback);
+        groupBuilder.MapGet("auth/google-response-login", LoginGoogleCallback);
         groupBuilder.MapPost("refresh", Refresh).RequireAuthorization();
         groupBuilder.MapPost("logout", Logout).RequireAuthorization();
     }
 
-    [EndpointSummary("Login")]
-    [EndpointDescription("Logs in a user")]
-    public static Results<ChallengeHttpResult, InternalServerError> Login()
+    [EndpointSummary("Register")]
+    [EndpointDescription("Registers a user")]
+    public static Results<ChallengeHttpResult, InternalServerError> Register([FromQuery] bool hasAcceptedTerms)
     {
         try
         {
-            var properties = new AuthenticationProperties { RedirectUri = "/api/users/auth/google-response" };
+            var properties = new AuthenticationProperties
+                { RedirectUri = $"/api/users/auth/google-response-register?hasAcceptedTerms={hasAcceptedTerms}" };
             return TypedResults.Challenge(properties, [GoogleDefaults.AuthenticationScheme]);
         }
         catch (Exception)
@@ -39,9 +43,10 @@ public class Users : IEndpointGroup
 
     [EndpointSummary("google callback")]
     [EndpointDescription("google auth callback")]
-    public static async Task<Results<RedirectHttpResult, BadRequest<string>, InternalServerError>> GoogleCallback(
-        ISender sender, HttpContext context, UserManager<ApplicationUser> userManager, ITokenService tokenService,
-        IWebHostEnvironment environment, IOptions<ClientOptions> clientOptions)
+    public static async Task<Results<RedirectHttpResult, BadRequest<string>, InternalServerError>>
+        RegisterGoogleCallback(
+            ISender sender, HttpContext context, UserManager<ApplicationUser> userManager, ITokenService tokenService,
+            IWebHostEnvironment environment, IOptions<ClientOptions> clientOptions)
     {
         try
         {
@@ -55,34 +60,89 @@ public class Users : IEndpointGroup
             var email = result.Principal.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
             var firstName = result.Principal.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value;
             var lastName = result.Principal.FindFirst(System.Security.Claims.ClaimTypes.Surname)?.Value;
+            var hasAcceptedTerms = context.Request.Query["hasAcceptedTerms"].ToString()
+                .Equals("TRUE", StringComparison.InvariantCultureIgnoreCase);
 
             if (string.IsNullOrEmpty(email)) return TypedResults.BadRequest("Email not provided by Google.");
+            if (!hasAcceptedTerms)
+                return TypedResults.BadRequest("You must accept the Terms of Service to register an account.");
 
             var user = await userManager.FindByEmailAsync(email);
-            string userId;
             if (user == null)
             {
+                var userPassword = $"{email}-WS-{nameIdentifier}";
                 RegisterUserCommand command = new RegisterUserCommand
                 {
                     Email = email,
                     FirstName = firstName ?? string.Empty,
                     LastName = lastName,
-                    Password = nameIdentifier ?? Guid.CreateVersion7().ToString()
+                    Password = userPassword,
+                    HasAcceptedTerms = true
                 };
                 var registerResult = await sender.Send(command);
                 if (registerResult.IsFailure)
                 {
                     return TypedResults.InternalServerError();
                 }
-
-                userId = registerResult.Value;
             }
             else
             {
-                userId = user.Id.ToString();
+                return TypedResults.BadRequest(
+                    "Cannot register user, an existing user with the same email already exists");
             }
 
-            var tokens = await tokenService.CreateTokensAsync(userId);
+            if (string.IsNullOrWhiteSpace(clientOptions.Value.ClientDomain))
+            {
+                return TypedResults.InternalServerError();
+            }
+
+            return TypedResults.Redirect($"{clientOptions.Value.ClientDomain}/login");
+        }
+        catch (Exception)
+        {
+            return TypedResults.InternalServerError();
+        }
+    }
+
+    [EndpointSummary("Login")]
+    [EndpointDescription("Logs in a user")]
+    public static Results<ChallengeHttpResult, InternalServerError> Login()
+    {
+        try
+        {
+            var properties = new AuthenticationProperties { RedirectUri = "/api/users/auth/google-response-login" };
+            return TypedResults.Challenge(properties, [GoogleDefaults.AuthenticationScheme]);
+        }
+        catch (Exception)
+        {
+            return TypedResults.InternalServerError();
+        }
+    }
+
+    [EndpointSummary("google callback")]
+    [EndpointDescription("google auth callback")]
+    public static async Task<Results<RedirectHttpResult, BadRequest<string>, InternalServerError>> LoginGoogleCallback(
+        ISender sender, HttpContext context, UserManager<ApplicationUser> userManager, ITokenService tokenService,
+        IWebHostEnvironment environment, IOptions<ClientOptions> clientOptions)
+    {
+        try
+        {
+            var result = await context.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);
+            if (!result.Succeeded || result.Principal == null)
+            {
+                return TypedResults.BadRequest("Google authentication failed.");
+            }
+
+            var email = result.Principal.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email)) return TypedResults.BadRequest("Email not provided by Google.");
+
+            var user = await userManager.FindByEmailAsync(email);
+            if (user == null)
+            {
+                return TypedResults.BadRequest("Please register an account first.");
+            }
+
+            var tokens = await tokenService.CreateTokensAsync(user.Id.ToString());
             context.Response.Cookies.Append("AuthToken", tokens.AccessToken, new CookieOptions
             {
                 HttpOnly = true,
@@ -99,17 +159,12 @@ public class Users : IEndpointGroup
                 Path = "/api/Users"
             });
 
-            if (environment.IsDevelopment())
-            {
-                return TypedResults.Redirect("https://localhost:7168/scalar");
-            }
-
             if (string.IsNullOrWhiteSpace(clientOptions.Value.ClientDomain))
             {
                 return TypedResults.InternalServerError();
             }
 
-            return TypedResults.Redirect($"{clientOptions.Value.ClientDomain}");
+            return TypedResults.Redirect($"{clientOptions.Value.ClientDomain}/dashboard");
         }
         catch (Exception)
         {
