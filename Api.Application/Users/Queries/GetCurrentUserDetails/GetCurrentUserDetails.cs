@@ -22,21 +22,21 @@ public class GetCurrentUserDetailsHandler : IRequestHandler<GetCurrentUserDetail
         CancellationToken cancellationToken)
     {
         var userId = _currentUser.Id;
-        var refreshToken = _currentUser.RefreshToken;
-        if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(refreshToken))
+        if (string.IsNullOrWhiteSpace(userId))
         {
             return Result<UserDetailsDto>.Unauthorized(["Unauthorized Access"]);
         }
 
-        var existingToken = _dbContext.RefreshTokens.SingleOrDefault(t =>
-            t.Token == refreshToken && t.UserId == new Guid(userId) && t.IsActive);
-
+        var existingToken =
+            await _dbContext.RefreshTokens.FirstOrDefaultAsync(t => t.UserId == new Guid(userId) && t.IsActive,
+                cancellationToken: cancellationToken);
         if (existingToken == null)
         {
             return Result<UserDetailsDto>.Unauthorized(["Unauthorized Access"]);
         }
 
-        var existingUser = _dbContext.DomainUsers.SingleOrDefault(t => t.Id == new Guid(userId));
+        var existingUser = await _dbContext.DomainUsers.SingleOrDefaultAsync(t => t.Id == new Guid(userId),
+            cancellationToken: cancellationToken);
         if (existingUser == null)
         {
             return Result<UserDetailsDto>.Unauthorized(["Unauthorized Access"]);
@@ -47,7 +47,7 @@ public class GetCurrentUserDetailsHandler : IRequestHandler<GetCurrentUserDetail
             PublicId = existingUser.PublicId,
             CreatedAt = existingUser.Created,
             ModifiedAt = existingUser.LastModified,
-            Firstname = existingUser.FirstName,
+            FirstName = existingUser.FirstName,
             LastName = existingUser.LastName,
             Email = existingUser.Email
         };
