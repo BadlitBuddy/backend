@@ -18,8 +18,8 @@ public class Users : IEndpointGroup
 {
     public static void Map(RouteGroupBuilder groupBuilder)
     {
-        groupBuilder.MapGet("register", Register);
-        groupBuilder.MapGet("auth/google-response-register", RegisterGoogleCallback);
+        groupBuilder.MapGet("signup", Signup);
+        groupBuilder.MapGet("auth/google-response-signup", SignupGoogleCallback);
         groupBuilder.MapGet("login", Login);
         groupBuilder.MapGet("auth/google-response-login", LoginGoogleCallback);
         groupBuilder.MapPost("refresh", Refresh).RequireAuthorization();
@@ -50,9 +50,9 @@ public class Users : IEndpointGroup
         return TypedResults.Redirect(url);
     }
 
-    [EndpointSummary("Register")]
-    [EndpointDescription("Registers a user")]
-    public static Results<ChallengeHttpResult, RedirectHttpResult> Register([FromQuery] bool hasAcceptedTerms,
+    [EndpointSummary("Sign up")]
+    [EndpointDescription("Signs up a user")]
+    public static Results<ChallengeHttpResult, RedirectHttpResult> Signup([FromQuery] bool hasAcceptedTerms,
         IOptions<ClientOptions> clientOptions)
     {
         var clientDomain = clientOptions.Value.ClientDomain;
@@ -60,26 +60,26 @@ public class Users : IEndpointGroup
         {
             var properties = new AuthenticationProperties
             {
-                RedirectUri = $"/api/users/auth/google-response-register",
+                RedirectUri = "/api/users/auth/google-response-signup",
                 Items =
                 {
                     ["hasAcceptedTerms"] = hasAcceptedTerms.ToString(),
                     ["successRedirectUrl"] = $"{clientDomain}/login",
-                    ["failureRedirectUrl"] = $"{clientDomain}/register"
+                    ["failureRedirectUrl"] = $"{clientDomain}/signup"
                 }
             };
             return TypedResults.Challenge(properties, [GoogleDefaults.AuthenticationScheme]);
         }
         catch (Exception)
         {
-            return RedirectWithError($"${clientDomain}/register", "Google authentication failed.",
+            return RedirectWithError($"${clientDomain}/signup", "Google authentication failed.",
                 "An unexpected error occured while trying to authenticate with google, please try again.");
         }
     }
 
     [EndpointSummary("google callback")]
     [EndpointDescription("google auth callback")]
-    public static async Task<RedirectHttpResult> RegisterGoogleCallback(
+    public static async Task<RedirectHttpResult> SignupGoogleCallback(
         ISender sender, HttpContext context, UserManager<ApplicationUser> userManager, ITokenService tokenService,
         IWebHostEnvironment environment, IOptions<ClientOptions> clientOptions)
     {
@@ -89,7 +89,7 @@ public class Users : IEndpointGroup
             var result = await context.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);
             if (!result.Succeeded || result.Principal == null)
             {
-                return RedirectWithError($"{clientDomain}/register", "Auth Failed",
+                return RedirectWithError($"{clientDomain}/signup", "Auth Failed",
                     "Google failed to authenticate your account.");
             }
 
@@ -100,8 +100,8 @@ public class Users : IEndpointGroup
             var hasAcceptedTerms = items["hasAcceptedTerms"];
             if (hasAcceptedTerms == null)
             {
-                return RedirectWithError($"{failureRedirectUrl}", "Registration",
-                    "Please accept the Terms of Service to register.");
+                return RedirectWithError($"{failureRedirectUrl}", "Signup",
+                    "Please accept the Terms of Service to sign up.");
             }
 
             var nameIdentifier = result.Principal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -117,7 +117,7 @@ public class Users : IEndpointGroup
             if (!hasAcceptedTerms.Equals("TRUE", StringComparison.InvariantCultureIgnoreCase))
             {
                 return RedirectWithError($"{failureRedirectUrl}", "Terms",
-                    "You must accept the Terms of Service to register an account.");
+                    "You must accept the Terms of Service to sign up for an account.");
             }
 
             var user = await userManager.FindByEmailAsync(email);
@@ -132,16 +132,16 @@ public class Users : IEndpointGroup
                     Password = userPassword,
                     HasAcceptedTerms = true
                 };
-                var registerResult = await sender.Send(command);
-                if (registerResult.IsFailure)
+                var signupResult = await sender.Send(command);
+                if (signupResult.IsFailure)
                 {
-                    return RedirectWithError($"{failureRedirectUrl}", "User", "Failed to register the user");
+                    return RedirectWithError($"{failureRedirectUrl}", "User", "Failed to sign up the user");
                 }
             }
             else
             {
                 return RedirectWithError($"{failureRedirectUrl}", "User",
-                    "Cannot register user, an existing user with the same email already exists.");
+                    "Cannot sign up user, an existing user with the same email already exists.");
             }
 
             if (string.IsNullOrWhiteSpace(clientOptions.Value.ClientDomain))
@@ -196,7 +196,7 @@ public class Users : IEndpointGroup
             var result = await context.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);
             if (!result.Succeeded || result.Principal == null)
             {
-                return RedirectWithError($"{clientDomain}/register", "Auth Failed",
+                return RedirectWithError($"{clientDomain}/signup", "Auth Failed",
                     "Google failed to authenticate your account.");
             }
 
@@ -215,7 +215,7 @@ public class Users : IEndpointGroup
             if (user == null)
             {
                 return RedirectWithError($"{failureRedirectUrl}", "Account not found",
-                    "Please register an account first.");
+                    "Please sign up for an account first.");
             }
 
             var tokens = await tokenService.CreateTokensAsync(user.Id.ToString());
