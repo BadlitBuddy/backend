@@ -26,13 +26,6 @@ public class Users : IEndpointGroup
         groupBuilder.MapPost("logout", Logout).RequireAuthorization();
     }
 
-    private static ProblemHttpResult BadRequestProblem(string detail, string title = "Bad Request") =>
-        TypedResults.Problem(
-            detail: detail,
-            title: title,
-            statusCode: StatusCodes.Status400BadRequest,
-            type: "https://tools.ietf.org/html/rfc9110#section-15.5.1");
-
     private static ProblemHttpResult UnauthorizedProblem(string detail = "Authentication is required.") =>
         TypedResults.Problem(
             detail: detail,
@@ -168,41 +161,61 @@ public class Users : IEndpointGroup
 
     [EndpointSummary("Login")]
     [EndpointDescription("Logs in a user")]
-    public static Results<ChallengeHttpResult, ProblemHttpResult> Login()
+    public static Results<ChallengeHttpResult, RedirectHttpResult> Login(IOptions<ClientOptions> clientOptions)
     {
+        var clientDomain = clientOptions.Value.ClientDomain;
         try
         {
-            var properties = new AuthenticationProperties { RedirectUri = "/api/users/auth/google-response-login" };
+            var properties = new AuthenticationProperties
+            {
+                RedirectUri = "/api/users/auth/google-response-login", Items =
+                {
+                    ["successRedirectUrl"] = $"{clientDomain}/dashboard",
+                    ["failureRedirectUrl"] = $"{clientDomain}/login"
+                }
+            };
             return TypedResults.Challenge(properties, [GoogleDefaults.AuthenticationScheme]);
         }
         catch (Exception)
         {
-            return InternalErrorProblem("Failed to initiate login.");
+            return RedirectWithError($"${clientDomain}/login", "Google authentication failed.",
+                "An unexpected error occured while trying to authenticate with google, please try again.");
         }
     }
 
     [EndpointSummary("google callback")]
     [EndpointDescription("google auth callback")]
-    public static async Task<Results<RedirectHttpResult, ProblemHttpResult>> LoginGoogleCallback(
+    public static async Task<RedirectHttpResult> LoginGoogleCallback(
         ISender sender, HttpContext context, UserManager<ApplicationUser> userManager, ITokenService tokenService,
         IWebHostEnvironment environment, IOptions<ClientOptions> clientOptions)
     {
+        var clientDomain = clientOptions.Value.ClientDomain;
+
         try
         {
             var result = await context.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);
             if (!result.Succeeded || result.Principal == null)
             {
-                return BadRequestProblem("Google authentication failed.");
+                return RedirectWithError($"{clientDomain}/register", "Auth Failed",
+                    "Google failed to authenticate your account.");
             }
+
+            var items = result.Properties.Items;
+            var successRedirectUrl = items["successRedirectUrl"];
+            var failureRedirectUrl = items["failureRedirectUrl"];
 
             var email = result.Principal.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
             if (string.IsNullOrEmpty(email))
-                return BadRequestProblem("Email not provided by Google.");
+            {
+                return RedirectWithError($"{failureRedirectUrl}", "Email",
+                    "Email not provided by Google.");
+            }
 
             var user = await userManager.FindByEmailAsync(email);
             if (user == null)
             {
-                return BadRequestProblem("Please register an account first.", title: "Account Not Found");
+                return RedirectWithError($"{failureRedirectUrl}", "Account not found",
+                    "Please register an account first.");
             }
 
             var tokens = await tokenService.CreateTokensAsync(user.Id.ToString());
@@ -222,16 +235,18 @@ public class Users : IEndpointGroup
                 Path = "/api/Users"
             });
 
-            if (string.IsNullOrWhiteSpace(clientOptions.Value.ClientDomain))
+            if (string.IsNullOrWhiteSpace(clientDomain))
             {
-                return InternalErrorProblem("Client domain is not configured.");
+                return RedirectWithError($"{failureRedirectUrl}", "Client Domain",
+                    "An internal server error has occured.");
             }
 
-            return TypedResults.Redirect($"{clientOptions.Value.ClientDomain}/dashboard");
+            return TypedResults.Redirect($"{successRedirectUrl}");
         }
         catch (Exception)
         {
-            return InternalErrorProblem();
+            return RedirectWithError($"{clientDomain}/login", "Error",
+                "An internal server error has occured.");
         }
     }
 
