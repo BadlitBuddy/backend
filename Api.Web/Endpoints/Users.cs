@@ -227,7 +227,8 @@ public class Users : IEndpointGroup
                 HttpOnly = true,
                 Secure = true,
                 SameSite = SameSiteMode.Strict,
-                Expires = DateTime.UtcNow.AddMinutes(15)
+                Expires = DateTime.UtcNow.AddMinutes(15),
+                Path = "/"
             });
             context.Response.Cookies.Append("RefreshToken", tokens.RefreshToken, new CookieOptions
             {
@@ -288,7 +289,8 @@ public class Users : IEndpointGroup
                 HttpOnly = true,
                 Secure = true,
                 SameSite = SameSiteMode.Strict,
-                Expires = DateTime.UtcNow.AddMinutes(15)
+                Expires = DateTime.UtcNow.AddMinutes(15),
+                Path = "/"
             });
             context.Response.Cookies.Append("RefreshToken", response.RefreshToken, new CookieOptions
             {
