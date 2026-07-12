@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Options;
 
 namespace Api.Web.Endpoints;
@@ -17,20 +18,13 @@ public class Users : IEndpointGroup
 {
     public static void Map(RouteGroupBuilder groupBuilder)
     {
-        groupBuilder.MapGet("register", Register);
-        groupBuilder.MapGet("auth/google-response-register", RegisterGoogleCallback);
+        groupBuilder.MapGet("signup", Signup);
+        groupBuilder.MapGet("auth/google-response-signup", SignupGoogleCallback);
         groupBuilder.MapGet("login", Login);
         groupBuilder.MapGet("auth/google-response-login", LoginGoogleCallback);
         groupBuilder.MapPost("refresh", Refresh).RequireAuthorization();
         groupBuilder.MapPost("logout", Logout).RequireAuthorization();
     }
-
-    private static ProblemHttpResult BadRequestProblem(string detail, string title = "Bad Request") =>
-        TypedResults.Problem(
-            detail: detail,
-            title: title,
-            statusCode: StatusCodes.Status400BadRequest,
-            type: "https://tools.ietf.org/html/rfc9110#section-15.5.1");
 
     private static ProblemHttpResult UnauthorizedProblem(string detail = "Authentication is required.") =>
         TypedResults.Problem(
@@ -46,50 +40,85 @@ public class Users : IEndpointGroup
             statusCode: StatusCodes.Status500InternalServerError,
             type: "https://tools.ietf.org/html/rfc9110#section-15.6.1");
 
-    [EndpointSummary("Register")]
-    [EndpointDescription("Registers a user")]
-    public static Results<ChallengeHttpResult, ProblemHttpResult> Register([FromQuery] bool hasAcceptedTerms)
+    private static RedirectHttpResult RedirectWithError(string baseUrl, string code, string message)
     {
+        var url = QueryHelpers.AddQueryString(baseUrl, new Dictionary<string, string?>
+        {
+            ["error"] = code,
+            ["error_description"] = message
+        });
+        return TypedResults.Redirect(url);
+    }
+
+    [EndpointSummary("Sign up")]
+    [EndpointDescription("Signs up a user")]
+    public static Results<ChallengeHttpResult, RedirectHttpResult> Signup([FromQuery] bool hasAcceptedTerms,
+        IOptions<ClientOptions> clientOptions)
+    {
+        var clientDomain = clientOptions.Value.ClientDomain;
         try
         {
             var properties = new AuthenticationProperties
-                { RedirectUri = $"/api/users/auth/google-response-register?hasAcceptedTerms={hasAcceptedTerms}" };
+            {
+                RedirectUri = "/api/users/auth/google-response-signup",
+                Items =
+                {
+                    ["hasAcceptedTerms"] = hasAcceptedTerms.ToString(),
+                    ["successRedirectUrl"] = $"{clientDomain}/login",
+                    ["failureRedirectUrl"] = $"{clientDomain}/signup"
+                }
+            };
             return TypedResults.Challenge(properties, [GoogleDefaults.AuthenticationScheme]);
         }
         catch (Exception)
         {
-            return InternalErrorProblem("Failed to initiate registration.");
+            return RedirectWithError($"${clientDomain}/signup", "Google authentication failed.",
+                "An unexpected error occured while trying to authenticate with google, please try again.");
         }
     }
 
     [EndpointSummary("google callback")]
     [EndpointDescription("google auth callback")]
-    public static async Task<Results<RedirectHttpResult, ProblemHttpResult>> RegisterGoogleCallback(
+    public static async Task<RedirectHttpResult> SignupGoogleCallback(
         ISender sender, HttpContext context, UserManager<ApplicationUser> userManager, ITokenService tokenService,
         IWebHostEnvironment environment, IOptions<ClientOptions> clientOptions)
     {
         try
         {
+            var clientDomain = clientOptions.Value.ClientDomain;
             var result = await context.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);
             if (!result.Succeeded || result.Principal == null)
             {
-                return BadRequestProblem("Google authentication failed.");
+                return RedirectWithError($"{clientDomain}/signup", "Auth Failed",
+                    "Google failed to authenticate your account.");
+            }
+
+            var items = result.Properties.Items;
+            var successRedirectUrl = items["successRedirectUrl"];
+            var failureRedirectUrl = items["failureRedirectUrl"];
+
+            var hasAcceptedTerms = items["hasAcceptedTerms"];
+            if (hasAcceptedTerms == null)
+            {
+                return RedirectWithError($"{failureRedirectUrl}", "Signup",
+                    "Please accept the Terms of Service to sign up.");
             }
 
             var nameIdentifier = result.Principal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             var email = result.Principal.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
             var firstName = result.Principal.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value;
             var lastName = result.Principal.FindFirst(System.Security.Claims.ClaimTypes.Surname)?.Value;
-            var hasAcceptedTerms = context.Request.Query["hasAcceptedTerms"].ToString()
-                .Equals("TRUE", StringComparison.InvariantCultureIgnoreCase);
 
             if (string.IsNullOrEmpty(email))
-                return BadRequestProblem("Email not provided by Google.");
+            {
+                return RedirectWithError($"{failureRedirectUrl}", "Email", "Email not valid.");
+            }
 
-            if (!hasAcceptedTerms)
-                return BadRequestProblem(
-                    "You must accept the Terms of Service to register an account.",
-                    title: "Terms Not Accepted");
+            if (!hasAcceptedTerms.Equals("TRUE", StringComparison.InvariantCultureIgnoreCase))
+            {
+                return RedirectWithError($"{failureRedirectUrl}", "Terms",
+                    "You must accept the Terms of Service to sign up for an account.");
+            }
 
             var user = await userManager.FindByEmailAsync(email);
             if (user == null)
@@ -103,69 +132,90 @@ public class Users : IEndpointGroup
                     Password = userPassword,
                     HasAcceptedTerms = true
                 };
-                var registerResult = await sender.Send(command);
-                if (registerResult.IsFailure)
+                var signupResult = await sender.Send(command);
+                if (signupResult.IsFailure)
                 {
-                    return InternalErrorProblem("Failed to register the user.");
+                    return RedirectWithError($"{failureRedirectUrl}", "User", "Failed to sign up the user");
                 }
             }
             else
             {
-                return BadRequestProblem(
-                    "Cannot register user, an existing user with the same email already exists.",
-                    title: "User Already Exists");
+                return RedirectWithError($"{failureRedirectUrl}", "User",
+                    "Cannot sign up user, an existing user with the same email already exists.");
             }
 
             if (string.IsNullOrWhiteSpace(clientOptions.Value.ClientDomain))
             {
-                return InternalErrorProblem("Client domain is not configured.");
+                return RedirectWithError($"{failureRedirectUrl}", "Client Domain",
+                    "An internal server error has occured.");
             }
 
-            return TypedResults.Redirect($"{clientOptions.Value.ClientDomain}/login");
+            return TypedResults.Redirect($"{successRedirectUrl}");
         }
         catch (Exception)
         {
-            return InternalErrorProblem();
+            return RedirectWithError($"{clientOptions.Value.ClientDomain}/login", "Error",
+                "An internal server error has occured.");
         }
     }
 
     [EndpointSummary("Login")]
     [EndpointDescription("Logs in a user")]
-    public static Results<ChallengeHttpResult, ProblemHttpResult> Login()
+    public static Results<ChallengeHttpResult, RedirectHttpResult> Login(IOptions<ClientOptions> clientOptions)
     {
+        var clientDomain = clientOptions.Value.ClientDomain;
         try
         {
-            var properties = new AuthenticationProperties { RedirectUri = "/api/users/auth/google-response-login" };
+            var properties = new AuthenticationProperties
+            {
+                RedirectUri = "/api/users/auth/google-response-login", Items =
+                {
+                    ["successRedirectUrl"] = $"{clientDomain}/dashboard",
+                    ["failureRedirectUrl"] = $"{clientDomain}/login"
+                }
+            };
             return TypedResults.Challenge(properties, [GoogleDefaults.AuthenticationScheme]);
         }
         catch (Exception)
         {
-            return InternalErrorProblem("Failed to initiate login.");
+            return RedirectWithError($"${clientDomain}/login", "Google authentication failed.",
+                "An unexpected error occured while trying to authenticate with google, please try again.");
         }
     }
 
     [EndpointSummary("google callback")]
     [EndpointDescription("google auth callback")]
-    public static async Task<Results<RedirectHttpResult, ProblemHttpResult>> LoginGoogleCallback(
+    public static async Task<RedirectHttpResult> LoginGoogleCallback(
         ISender sender, HttpContext context, UserManager<ApplicationUser> userManager, ITokenService tokenService,
         IWebHostEnvironment environment, IOptions<ClientOptions> clientOptions)
     {
+        var clientDomain = clientOptions.Value.ClientDomain;
+
         try
         {
             var result = await context.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);
             if (!result.Succeeded || result.Principal == null)
             {
-                return BadRequestProblem("Google authentication failed.");
+                return RedirectWithError($"{clientDomain}/signup", "Auth Failed",
+                    "Google failed to authenticate your account.");
             }
+
+            var items = result.Properties.Items;
+            var successRedirectUrl = items["successRedirectUrl"];
+            var failureRedirectUrl = items["failureRedirectUrl"];
 
             var email = result.Principal.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
             if (string.IsNullOrEmpty(email))
-                return BadRequestProblem("Email not provided by Google.");
+            {
+                return RedirectWithError($"{failureRedirectUrl}", "Email",
+                    "Email not provided by Google.");
+            }
 
             var user = await userManager.FindByEmailAsync(email);
             if (user == null)
             {
-                return BadRequestProblem("Please register an account first.", title: "Account Not Found");
+                return RedirectWithError($"{failureRedirectUrl}", "Account not found",
+                    "Please sign up for an account first.");
             }
 
             var tokens = await tokenService.CreateTokensAsync(user.Id.ToString());
@@ -185,16 +235,18 @@ public class Users : IEndpointGroup
                 Path = "/api/Users"
             });
 
-            if (string.IsNullOrWhiteSpace(clientOptions.Value.ClientDomain))
+            if (string.IsNullOrWhiteSpace(clientDomain))
             {
-                return InternalErrorProblem("Client domain is not configured.");
+                return RedirectWithError($"{failureRedirectUrl}", "Client Domain",
+                    "An internal server error has occured.");
             }
 
-            return TypedResults.Redirect($"{clientOptions.Value.ClientDomain}/dashboard");
+            return TypedResults.Redirect($"{successRedirectUrl}");
         }
         catch (Exception)
         {
-            return InternalErrorProblem();
+            return RedirectWithError($"{clientDomain}/login", "Error",
+                "An internal server error has occured.");
         }
     }
 
