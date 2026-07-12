@@ -27,10 +27,7 @@ var app = builder.Build();
 
 app.UseHangFireDashboard();
 app.UseHttpsRedirection();
-app.UseCors(static builder =>
-    builder.AllowAnyMethod()
-        .AllowAnyHeader()
-        .AllowAnyOrigin());
+app.UseCors("CorsPolicy");
 app.MapOpenApi();
 app.MapScalarApiReference();
 
