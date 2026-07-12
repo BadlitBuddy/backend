@@ -1,5 +1,7 @@
 using Api.Application.Common.Interfaces;
 using Api.Application.Users.Commands.RegisterUser;
+using Api.Application.Users.Dtos;
+using Api.Application.Users.Queries.GetCurrentUserDetails;
 using Api.Infrastructure.Identity;
 using Api.Web.Configuration;
 using Microsoft.AspNetCore.Authentication;
@@ -22,6 +24,7 @@ public class Users : IEndpointGroup
         groupBuilder.MapGet("auth/google-response-signup", SignupGoogleCallback);
         groupBuilder.MapGet("login", Login);
         groupBuilder.MapGet("auth/google-response-login", LoginGoogleCallback);
+        groupBuilder.MapGet("me", GetUserDetails);
         groupBuilder.MapPost("refresh", Refresh).RequireAuthorization();
         groupBuilder.MapPost("logout", Logout).RequireAuthorization();
     }
@@ -248,6 +251,20 @@ public class Users : IEndpointGroup
             return RedirectWithError($"{clientDomain}/login", "Error",
                 "An internal server error has occured.");
         }
+    }
+
+    [EndpointSummary("Get User Details")]
+    [EndpointDescription("Gets the current users details")]
+    public async static Task<Results<ProblemHttpResult, Ok<UserDetailsDto>>> GetUserDetails(
+        IOptions<ClientOptions> clientOptions, ISender sender)
+    {
+        var result = await sender.Send(new GetCurrentUserDetailsQuery());
+        if (result.IsFailure)
+        {
+            return result.ToProblemResult();
+        }
+
+        return TypedResults.Ok(result.Value);
     }
 
     [EndpointSummary("Refresh")]
