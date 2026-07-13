@@ -79,16 +79,22 @@ public class TokenService : ITokenService
 
     public async Task RevokeAsync(string refreshToken, Guid userId)
     {
-        var token = await _dbContext.RefreshTokens
-            .SingleOrDefaultAsync(t => t.Token == refreshToken && t.UserId == userId);
-        if (token == null)
+        var tokens = await _dbContext.RefreshTokens
+            .Where(rt => rt.UserId == userId && rt.IsActive)
+            .ToListAsync();
+
+        var currentToken = tokens.SingleOrDefault(rt => rt.Token == refreshToken);
+        if (currentToken == null)
         {
-            throw new UnauthorizedAccessException();
+            throw new UnauthorizedAccessException("Invalid or already revoked token.");
         }
 
-        token.RevokedAt = DateTimeOffset.UtcNow;
-        token.ReplacedByToken = null;
-        token.IsActive = false;
+        foreach (var token in tokens)
+        {
+            token.RevokedAt = DateTimeOffset.UtcNow;
+            token.ReplacedByToken = null;
+            token.IsActive = false;
+        }
 
         await _dbContext.SaveChangesAsync();
     }

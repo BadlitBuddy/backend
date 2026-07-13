@@ -11,7 +11,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
     {
     }
-
+    // TODO: Add query filters
     public DbSet<User> DomainUsers => Set<User>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Organization> Organizations => Set<Organization>();
