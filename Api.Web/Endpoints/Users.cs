@@ -236,7 +236,7 @@ public class Users : IEndpointGroup
                 Secure = true,
                 SameSite = SameSiteMode.Strict,
                 Expires = DateTime.UtcNow.AddDays(7),
-                Path = "/api/Users"
+                Path = "/api/users"
             });
 
             if (string.IsNullOrWhiteSpace(clientDomain))
@@ -298,7 +298,7 @@ public class Users : IEndpointGroup
                 Secure = true,
                 SameSite = SameSiteMode.Strict,
                 Expires = DateTime.UtcNow.AddDays(7),
-                Path = "/api/Users"
+                Path = "/api/users"
             });
 
             return TypedResults.Ok();
@@ -320,14 +320,19 @@ public class Users : IEndpointGroup
             var userId = currentUserService.Id;
             var refreshToken = currentUserService.RefreshToken;
             if (string.IsNullOrWhiteSpace(userId))
+            {
                 return UnauthorizedProblem();
+            }
+
             if (string.IsNullOrWhiteSpace(refreshToken))
+            {
                 return UnauthorizedProblem();
+            }
 
             await tokenService.RevokeAsync(refreshToken, new Guid(userId));
 
             context.Response.Cookies.Delete("AuthToken");
-            context.Response.Cookies.Delete("RefreshToken", new CookieOptions { Path = "/api/Users" });
+            context.Response.Cookies.Delete("RefreshToken", new CookieOptions { Path = "/api/users" });
 
             return TypedResults.Ok(new LogoutResponseDto("Logged Out"));
         }
