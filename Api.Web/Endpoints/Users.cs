@@ -190,7 +190,7 @@ public class Users : IEndpointGroup
     [EndpointDescription("google auth callback")]
     public static async Task<RedirectHttpResult> LoginGoogleCallback(
         ISender sender, HttpContext context, UserManager<ApplicationUser> userManager, ITokenService tokenService,
-        IWebHostEnvironment environment, IOptions<ClientOptions> clientOptions)
+        IWebHostEnvironment environment, IOptions<ClientOptions> clientOptions, IOptions<JwtOptions> jwtOptions)
     {
         var clientDomain = clientOptions.Value.ClientDomain;
 
@@ -227,7 +227,7 @@ public class Users : IEndpointGroup
                 HttpOnly = true,
                 Secure = true,
                 SameSite = SameSiteMode.Strict,
-                Expires = DateTime.UtcNow.AddMinutes(15),
+                Expires = DateTime.UtcNow.AddMinutes(jwtOptions.Value.AccessTokenExpirationMinutes ?? 5),
                 Path = "/"
             });
             context.Response.Cookies.Append("RefreshToken", tokens.RefreshToken, new CookieOptions
@@ -235,7 +235,7 @@ public class Users : IEndpointGroup
                 HttpOnly = true,
                 Secure = true,
                 SameSite = SameSiteMode.Strict,
-                Expires = DateTime.UtcNow.AddDays(7),
+                Expires = DateTime.UtcNow.AddDays(jwtOptions.Value.RefreshTokenExpirationDays ?? 1),
                 Path = "/api/users"
             });
 
@@ -271,7 +271,7 @@ public class Users : IEndpointGroup
     [EndpointSummary("Refresh")]
     [EndpointDescription("Gets a refresh token")]
     public static async Task<Results<Ok, ProblemHttpResult>> Refresh(
-        ITokenService tokenService, IUser currentUserService, HttpContext context)
+        ITokenService tokenService, IUser currentUserService, HttpContext context, IOptions<JwtOptions> jwtOptions)
     {
         try
         {
@@ -289,7 +289,7 @@ public class Users : IEndpointGroup
                 HttpOnly = true,
                 Secure = true,
                 SameSite = SameSiteMode.Strict,
-                Expires = DateTime.UtcNow.AddMinutes(15),
+                Expires = DateTime.UtcNow.AddMinutes(jwtOptions.Value.AccessTokenExpirationMinutes ?? 5),
                 Path = "/"
             });
             context.Response.Cookies.Append("RefreshToken", response.RefreshToken, new CookieOptions
@@ -297,7 +297,7 @@ public class Users : IEndpointGroup
                 HttpOnly = true,
                 Secure = true,
                 SameSite = SameSiteMode.Strict,
-                Expires = DateTime.UtcNow.AddDays(7),
+                Expires = DateTime.UtcNow.AddDays(jwtOptions.Value.RefreshTokenExpirationDays ?? 1),
                 Path = "/api/users"
             });
 
