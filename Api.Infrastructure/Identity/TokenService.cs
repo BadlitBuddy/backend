@@ -124,11 +124,18 @@ public class TokenService : ITokenService
                 key,
                 SecurityAlgorithms.HmacSha256);
 
+        var authTokenExpirationMinutes = _config["Jwt:AccessTokenExpirationMinutes"]!;
+
+        if (!int.TryParse(authTokenExpirationMinutes, out int expirationMinutes))
+        {
+            expirationMinutes = 15;
+        }
+
         var token = new JwtSecurityToken(
             issuer: _config["Jwt:Issuer"],
             audience: _config["Jwt:Audience"],
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(15),
+            expires: DateTime.UtcNow.AddMinutes(expirationMinutes),
             signingCredentials: creds);
 
         return new JwtSecurityTokenHandler()
