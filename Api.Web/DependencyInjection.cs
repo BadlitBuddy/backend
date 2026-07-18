@@ -51,5 +51,8 @@ public static class DependencyInjection
         builder.Services.Configure<AuthOptions>(
             configuration.GetSection("Auth")
         );
+        builder.Services.Configure<JwtOptions>(
+            configuration.GetSection("Jwt")
+        );
     }
 }
