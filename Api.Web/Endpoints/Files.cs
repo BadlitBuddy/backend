@@ -4,12 +4,15 @@ using Api.Application.Files.Queries.GetUploadPresignedUrl;
 using Api.Domain.Enums;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Shared.Abstractions.Services;
 using Shared.Contracts.Enums;
 
 namespace Api.Web.Endpoints;
 
 public record UpdateStatusRequest(string? ProcessedObjectKey, TranscriptionJobStatus TranscriptionJobStatus);
+
+public record FileEventRequest(string[] UnprocessedObjectKeys);
 
 public class Files : IEndpointGroup
 {
@@ -19,26 +22,30 @@ public class Files : IEndpointGroup
 
         groupBuilder.MapPost(Upload);
         groupBuilder.MapPost("status", UpdateStatus);
-        groupBuilder.MapGet("events", Events);
+        groupBuilder.MapPost("events", Events);
     }
 
 
     [EndpointSummary("Events")]
     [EndpointDescription("Events related to the files")]
-    public static Results<ServerSentEventsResult<TranscriptionFinishedMessage>, ProblemHttpResult> Events(
-        [FromQuery] string unProcessedObjectKey,
+    public async static Task<Results<ServerSentEventsResult<TranscriptionFinishedMessage>, ProblemHttpResult>> Events(
+        [FromBody] FileEventRequest request,
         IMessageSubscriber messageSubscriber, IUser currentUserService,
         IApplicationDbContext dbContext, CancellationToken cancellationToken)
     {
-        var transcriptionJob = dbContext.TranscriptionJobs.SingleOrDefault(tj =>
-            tj.UnprocessedObjectKey == unProcessedObjectKey && tj.UserId == new Guid(currentUserService.Id!));
-        if (transcriptionJob == null)
+        var unProcessedObjectKeys = request.UnprocessedObjectKeys.Distinct();
+        var transcriptionJobs = await dbContext.TranscriptionJobs
+            .Where(tj =>
+                tj.UserId == new Guid(currentUserService.Id!) && tj.JobStatus != TranscriptionJobStatus.Completed)
+            .Where(tj => unProcessedObjectKeys.Contains(tj.UnprocessedObjectKey))
+            .ToListAsync(cancellationToken: cancellationToken);
+
+        if (transcriptionJobs.Count == 0)
         {
             return TypedResults.Problem(
-                detail: $"The transcription file with key '{unProcessedObjectKey}' could not be found.",
+                detail: "No files are associated with the provided keys.",
                 statusCode: StatusCodes.Status404NotFound,
-                title: "Resource Not Found"
-            );
+                title: "Resource Not Found");
         }
 
         return TypedResults.ServerSentEvents(
@@ -52,7 +59,9 @@ public class Files : IEndpointGroup
                                    MessageChannel.TranscriptionFinished)
                                .WithCancellation(cancellationToken))
             {
-                if (message.UnprocessedWavFileObjectKey == unProcessedObjectKey)
+                var transcriptionJob = transcriptionJobs.SingleOrDefault(tj =>
+                    message.UnprocessedWavFileObjectKey == tj.UnprocessedObjectKey);
+                if (transcriptionJob != null)
                 {
                     yield return message;
                 }
