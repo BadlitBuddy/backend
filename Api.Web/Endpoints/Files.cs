@@ -25,11 +25,22 @@ public class Files : IEndpointGroup
 
     [EndpointSummary("Events")]
     [EndpointDescription("Events related to the files")]
-    public static ServerSentEventsResult<TranscriptionFinishedMessage> Events(
+    public static Results<ServerSentEventsResult<TranscriptionFinishedMessage>, ProblemHttpResult> Events(
         [FromQuery] string unProcessedObjectKey,
         IMessageSubscriber messageSubscriber, IUser currentUserService,
-        CancellationToken cancellationToken)
+        IApplicationDbContext dbContext, CancellationToken cancellationToken)
     {
+        var transcriptionJob = dbContext.TranscriptionJobs.SingleOrDefault(tj =>
+            tj.UnprocessedObjectKey == unProcessedObjectKey && tj.UserId == new Guid(currentUserService.Id!));
+        if (transcriptionJob == null)
+        {
+            return TypedResults.Problem(
+                detail: $"The transcription file with key '{unProcessedObjectKey}' could not be found.",
+                statusCode: StatusCodes.Status404NotFound,
+                title: "Resource Not Found"
+            );
+        }
+
         return TypedResults.ServerSentEvents(
             GetEvents(),
             eventType: "transcription-finished");
@@ -41,12 +52,10 @@ public class Files : IEndpointGroup
                                    MessageChannel.TranscriptionFinished)
                                .WithCancellation(cancellationToken))
             {
-                if (message.UnprocessedWavFileObjectKey != unProcessedObjectKey && message.UserId != currentUserService.Id)
+                if (message.UnprocessedWavFileObjectKey == unProcessedObjectKey)
                 {
-                    continue;
+                    yield return message;
                 }
-
-                yield return message;
             }
         }
     }
