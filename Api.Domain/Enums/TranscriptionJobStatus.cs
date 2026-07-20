@@ -3,9 +3,9 @@ namespace Api.Domain.Enums;
 public enum TranscriptionJobStatus
 {
     [Description("Uploaded")]
-    Uploaded,
+    Uploaded = 0,
     [Description("Processing")]
-    Processing,
+    Processing = 1,
     [Description("Completed")]
-    Completed
+    Completed = 2
 }
