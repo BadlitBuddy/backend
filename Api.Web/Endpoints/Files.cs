@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Shared.Abstractions.Services;
 using Shared.Contracts.Enums;
+using TranscriptionJobStatus = Api.Domain.Enums.TranscriptionJobStatus;
 
 namespace Api.Web.Endpoints;
 
@@ -28,7 +29,7 @@ public class Files : IEndpointGroup
 
     [EndpointSummary("Events")]
     [EndpointDescription("Events related to the files")]
-    public async static Task<Results<ServerSentEventsResult<TranscriptionFinishedMessage>, ProblemHttpResult>> Events(
+    public async static Task<Results<ServerSentEventsResult<TranscriptionProcessMessage>, ProblemHttpResult>> Events(
         [FromBody] FileEventRequest request,
         IMessageSubscriber messageSubscriber, IUser currentUserService,
         IApplicationDbContext dbContext, CancellationToken cancellationToken)
@@ -52,11 +53,11 @@ public class Files : IEndpointGroup
             GetEvents(),
             eventType: "transcription-finished");
 
-        async IAsyncEnumerable<TranscriptionFinishedMessage> GetEvents()
+        async IAsyncEnumerable<TranscriptionProcessMessage> GetEvents()
         {
             await foreach (var message in messageSubscriber
-                               .SubscribeAsync<TranscriptionFinishedMessage>(
-                                   MessageChannel.TranscriptionFinished)
+                               .SubscribeAsync<TranscriptionProcessMessage>(
+                                   MessageChannel.TranscriptionProcess)
                                .WithCancellation(cancellationToken))
             {
                 var transcriptionJob = transcriptionJobs.SingleOrDefault(tj =>
