@@ -9,7 +9,7 @@ public class MessageChannel
         _channel = channel;
     }
 
-    public static readonly MessageChannel TranscriptionFinished = new("transcription.finished");
+    public static readonly MessageChannel TranscriptionProcess = new("transcription.process");
 
     public override string ToString() => _channel;
 
