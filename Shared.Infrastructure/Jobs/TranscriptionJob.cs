@@ -6,6 +6,7 @@ using Shared.Abstractions.Jobs;
 using Shared.Abstractions.Repositories;
 using Shared.Abstractions.Services;
 using Shared.Contracts.Enums;
+using TranscriptionJobStatus = Api.Domain.Enums.TranscriptionJobStatus;
 
 namespace Shared.Infrastructure.Jobs;
 
@@ -20,8 +21,8 @@ public class TranscriptionJob : ITranscriptionJob
 
     public TranscriptionJob(
         ITranscriptionService transcriptionService, IAudioJobStorageService audioJobStorageService,
-        ILogger<TranscriptionJob> logger, IHostEnvironment hostEnvironment, IMessagePublisher messagePublisher, 
-        ITranscriptionJobRepository  transcriptionJobRepository
+        ILogger<TranscriptionJob> logger, IHostEnvironment hostEnvironment, IMessagePublisher messagePublisher,
+        ITranscriptionJobRepository transcriptionJobRepository
     )
     {
         _transcriptionService = transcriptionService;
@@ -67,9 +68,10 @@ public class TranscriptionJob : ITranscriptionJob
             {
                 await s3Stream.CopyToAsync(fileStream, cancellationToken);
             }
-            
-            await _transcriptionJobRepository.UpdateStatusAsync(fileKey, outputObjectKey, TranscriptionJobStatus.Processing, new Guid(userId));
-            
+
+            await _transcriptionJobRepository.UpdateStatusAsync(fileKey, outputObjectKey,
+                TranscriptionJobStatus.Processing, new Guid(userId));
+
             await using (var stream = File.OpenRead(toProcessFilePath))
             await using (var writer = new StreamWriter(outputFilePath, append: false))
             {
@@ -80,6 +82,9 @@ public class TranscriptionJob : ITranscriptionJob
                     {
                         _logger.LogInformation(line);
                     }
+
+                    await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
+                        new TranscriptionProcessMessage(JobStatus.Processing, fileKey, outputObjectKey));
 
                     await writer.WriteLineAsync(line);
                 }
@@ -102,7 +107,8 @@ public class TranscriptionJob : ITranscriptionJob
                 outputObjectKey = uploadResult;
             }
 
-            await _transcriptionJobRepository.UpdateStatusAsync(fileKey, outputObjectKey, TranscriptionJobStatus.Completed, new Guid(userId));
+            await _transcriptionJobRepository.UpdateStatusAsync(fileKey, outputObjectKey,
+                TranscriptionJobStatus.Completed, new Guid(userId));
             await _audioJobStorageService.DeleteAudioAsync(fileKey, cancellationToken);
 
             _logger.LogInformation("Finished transcription and cleanup for: {FileKey}", fileKey);
@@ -116,8 +122,8 @@ public class TranscriptionJob : ITranscriptionJob
             if (File.Exists(toProcessFilePath)) File.Delete(toProcessFilePath);
             if (File.Exists(outputFilePath)) File.Delete(outputFilePath);
 
-            await _messagePublisher.PublishAsync(MessageChannel.TranscriptionFinished,
-                new TranscriptionFinishedMessage(userId, fileKey, outputObjectKey));
+            await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
+                new TranscriptionProcessMessage(JobStatus.Finished, fileKey, outputObjectKey));
         }
     }
 }
