@@ -7,7 +7,6 @@ public class UpdateFileStatusValidator : AbstractValidator<UpdateFileStatusComma
         RuleFor(x => x.UnprocessedObjectKey)
             .NotEmpty().WithMessage("The Unprocessed Object Key is required");
         RuleFor(x => x.TranscriptionJobStatus)
-            .IsInEnumWithValues()
-            .NotEmpty().WithMessage("Please specify a valid transcription job status");
+            .IsInEnumWithValues();
     }
 }
