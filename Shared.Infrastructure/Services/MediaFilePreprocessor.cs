@@ -1,5 +1,8 @@
 using System.Buffers;
 using System.Runtime.CompilerServices;
+using FFMpegCore;
+using FFMpegCore.Pipes;
+using NanoidDotNet;
 using Shared.Abstractions.Services;
 
 namespace Shared.Infrastructure.Services;
@@ -61,6 +64,56 @@ public class MediaFilePreprocessor : IMediaFilePreprocessor
         finally
         {
             ArrayPool<byte>.Shared.Return(buffer);
+        }
+    }
+
+    public async Task<string> ExtractAudioChunkFromWavAndWriteToTmpAsync(
+        string filePath,
+        TimeSpan startTime,
+        TimeSpan? stopTime = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (!File.Exists(filePath))
+            throw new FileNotFoundException("WAV file not found.", filePath);
+
+        if (startTime < TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(startTime));
+
+        if (stopTime.HasValue && stopTime.Value <= startTime)
+            throw new ArgumentOutOfRangeException(nameof(stopTime), "stopTime must be greater than startTime.");
+
+        var shortId = await Nanoid.GenerateAsync(size: 8);
+        var tempOutputPath = Path.Combine(Path.GetTempPath(), $"{shortId}.wav");
+
+        try
+        {
+            await FFMpegArguments
+                .FromFileInput(filePath, verifyExists: true, options => options
+                    .Seek(startTime))
+                .OutputToFile(tempOutputPath, overwrite: true, options =>
+                {
+                    if (stopTime.HasValue)
+                    {
+                        options.WithDuration(stopTime.Value - startTime);
+                    }
+
+                    options
+                        .WithAudioCodec("pcm_s16le")
+                        .ForceFormat("wav");
+                })
+                .CancellableThrough(cancellationToken)
+                .ProcessAsynchronously();
+
+            return tempOutputPath;
+        }
+        catch
+        {
+            if (File.Exists(tempOutputPath))
+            {
+                File.Delete(tempOutputPath);
+            }
+
+            throw;
         }
     }
 }
