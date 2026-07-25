@@ -2,15 +2,16 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Shared.Abstractions.Services;
 using Shared.Contracts.Constants;
+using Shared.Infrastructure.Dtos.TranscriptionProviderResults;
 using Whisper.net;
 
 namespace Shared.Infrastructure;
 
-public class WhisperTranscriptionService: ITranscriptionService, IDisposable
+public class WhisperTranscriptionService : ITranscriptionService, IDisposable
 {
     private readonly WhisperProcessor _processor;
     private readonly WhisperFactory _whisperFactory;
-    
+
     public WhisperTranscriptionService()
     {
         try
@@ -29,10 +30,11 @@ public class WhisperTranscriptionService: ITranscriptionService, IDisposable
         catch (Exception ex)
         {
             Dispose();
-            throw new InvalidOperationException($"Failed to initialize WhisperTranscriptionService with message: {ex.Message}");
+            throw new InvalidOperationException(
+                $"Failed to initialize WhisperTranscriptionService with message: {ex.Message}");
         }
     }
-    
+
     public void Dispose()
     {
         Dispose(true);
@@ -46,17 +48,18 @@ public class WhisperTranscriptionService: ITranscriptionService, IDisposable
         _whisperFactory.Dispose();
     }
 
-    public async IAsyncEnumerable<SegmentData> TranscribeAsync(
-        Stream fileStream, 
+    public async IAsyncEnumerable<TranscriptionSegment> TranscribeAsync(
+        Stream fileStream,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         await foreach (var result in _processor.ProcessAsync(fileStream, cancellationToken))
         {
-            yield return result;    
+            yield return WhisperNetMapper.ToSegment(result);
         }
     }
 
-    public async Task TranscribeAndWriteAsSrtFileAsync(Stream fileStream, string outputFilePath, CancellationToken cancellationToken)
+    public async Task TranscribeAndWriteAsSrtFileAsync(Stream fileStream, string outputFilePath,
+        CancellationToken cancellationToken)
     {
         await using var writer = new StreamWriter(outputFilePath, false, Encoding.UTF8);
         int counter = 1;
@@ -71,28 +74,30 @@ public class WhisperTranscriptionService: ITranscriptionService, IDisposable
             await writer.WriteLineAsync(counter.ToString());
             await writer.WriteLineAsync($"{startTime} --> {endTime}");
             await writer.WriteLineAsync(segment.Text.Trim());
-            await writer.WriteLineAsync(); 
+            await writer.WriteLineAsync();
 
             counter++;
         }
     }
 
-    public async Task TranscribeAndWriteAsTxtFileAsync(Stream fileStream, string outputFilePath, CancellationToken cancellationToken)
+    public async Task TranscribeAndWriteAsTxtFileAsync(Stream fileStream, string outputFilePath,
+        CancellationToken cancellationToken)
     {
         await using var writer = new StreamWriter(outputFilePath, false, Encoding.UTF8);
 
         await foreach (var segment in _processor.ProcessAsync(fileStream, cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            
+
             await writer.WriteLineAsync(segment.Text.Trim());
         }
     }
 
-    public async Task TranscribeAndWriteAsVttFileAsync(Stream fileStream, string outputFilePath, CancellationToken cancellationToken)
+    public async Task TranscribeAndWriteAsVttFileAsync(Stream fileStream, string outputFilePath,
+        CancellationToken cancellationToken)
     {
         await using var writer = new StreamWriter(outputFilePath, false, Encoding.UTF8);
-        
+
         await writer.WriteLineAsync("WEBVTT");
         await writer.WriteLineAsync();
 
@@ -105,7 +110,7 @@ public class WhisperTranscriptionService: ITranscriptionService, IDisposable
 
             await writer.WriteLineAsync($"{startTime} --> {endTime}");
             await writer.WriteLineAsync(segment.Text.Trim());
-            await writer.WriteLineAsync(); 
+            await writer.WriteLineAsync();
         }
     }
 }
