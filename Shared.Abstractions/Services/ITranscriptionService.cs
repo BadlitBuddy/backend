@@ -3,7 +3,7 @@ namespace Shared.Abstractions.Services;
 // TODO: Use ISP here for unnecessary methods
 public interface IStreamingTranscriptionService
 {
-    IAsyncEnumerable<TranscriptionSegment> TranscribeAsync(Stream fileStream, CancellationToken cancellationToken);
+    IAsyncEnumerable<TranscriptionSegment> TranscribeStreamingAsync(Stream fileStream, CancellationToken cancellationToken);
 
     Task TranscribeAndWriteAsSrtFileAsync(Stream fileStream, string outputFilePath,
         CancellationToken cancellationToken);

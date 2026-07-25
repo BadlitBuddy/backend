@@ -75,7 +75,7 @@ public class TranscriptionJob : ITranscriptionJob
             await using (var stream = File.OpenRead(toProcessFilePath))
             await using (var writer = new StreamWriter(outputFilePath, append: false))
             {
-                await foreach (var segment in _transcriptionService.TranscribeAsync(stream, cancellationToken))
+                await foreach (var segment in _transcriptionService.TranscribeStreamingAsync(stream, cancellationToken))
                 {
                     var line = $"{segment.Start}->{segment.End}: {segment.Text}";
                     if (_hostEnvironment.IsDevelopment())

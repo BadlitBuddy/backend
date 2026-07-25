@@ -48,7 +48,7 @@ public class WhisperTranscriptionService : IStreamingTranscriptionService, IDisp
         _whisperFactory.Dispose();
     }
 
-    public async IAsyncEnumerable<TranscriptionSegment> TranscribeAsync(
+    public async IAsyncEnumerable<TranscriptionSegment> TranscribeStreamingAsync(
         Stream fileStream,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
