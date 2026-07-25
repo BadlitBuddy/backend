@@ -1,6 +1,6 @@
-using Api.Domain.Enums;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Shared.Abstractions.ExternalServices.S3;
 using Shared.Abstractions.Jobs;
 using Shared.Abstractions.Repositories;
@@ -18,12 +18,14 @@ public class TranscriptionJob : ITranscriptionJob
     private readonly IHostEnvironment _hostEnvironment;
     private readonly IMessagePublisher _messagePublisher;
     private readonly ITranscriptionJobRepository _transcriptionJobRepository;
+    private readonly ITranscriptionService _cloudFlareTranscriptionService;
+    private readonly WorkerOptions _workerOptions;
 
     public TranscriptionJob(
         IStreamingTranscriptionService transcriptionService, IAudioJobStorageService audioJobStorageService,
         ILogger<TranscriptionJob> logger, IHostEnvironment hostEnvironment, IMessagePublisher messagePublisher,
-        ITranscriptionJobRepository transcriptionJobRepository
-    )
+        ITranscriptionJobRepository transcriptionJobRepository, ITranscriptionService cloudFlareTranscriptionService,
+        IOptions<WorkerOptions> workerOptions)
     {
         _transcriptionService = transcriptionService;
         _audioJobStorageService = audioJobStorageService;
@@ -31,6 +33,8 @@ public class TranscriptionJob : ITranscriptionJob
         _hostEnvironment = hostEnvironment;
         _messagePublisher = messagePublisher;
         _transcriptionJobRepository = transcriptionJobRepository;
+        _cloudFlareTranscriptionService = cloudFlareTranscriptionService;
+        _workerOptions = workerOptions.Value;
     }
 
     public async Task TranscribeFileAsync(string fileKey, CancellationToken cancellationToken)
@@ -72,22 +76,20 @@ public class TranscriptionJob : ITranscriptionJob
             await _transcriptionJobRepository.UpdateStatusAsync(fileKey, outputObjectKey,
                 TranscriptionJobStatus.Processing, new Guid(userId));
 
-            await using (var stream = File.OpenRead(toProcessFilePath))
-            await using (var writer = new StreamWriter(outputFilePath, append: false))
+            switch (_workerOptions.TranscriptionProvider)
             {
-                await foreach (var segment in _transcriptionService.TranscribeStreamingAsync(stream, cancellationToken))
-                {
-                    var line = $"{segment.Start}->{segment.End}: {segment.Text}";
-                    if (_hostEnvironment.IsDevelopment())
-                    {
-                        _logger.LogInformation(line);
-                    }
-
-                    await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
-                        new TranscriptionProcessMessage(JobStatus.Processing, fileKey, outputObjectKey));
-
-                    await writer.WriteLineAsync(line);
-                }
+                case TranscriptionProvider.WhisperNet:
+                    await TranscribeWithWhisperNet(toProcessFilePath, outputFilePath, outputObjectKey, fileKey,
+                        cancellationToken);
+                    break;
+                case TranscriptionProvider.Groq:
+                    throw new NotImplementedException("Groq currently not implemented");
+                case TranscriptionProvider.Cloudflare:
+                    await TranscribeWithCloudflare(toProcessFilePath, outputFilePath, fileKey, outputObjectKey,
+                        cancellationToken);
+                    break;
+                default:
+                    throw new InvalidOperationException("Unknown transcription provider");
             }
 
             await using (var uploadStream = new FileStream(
@@ -124,6 +126,60 @@ public class TranscriptionJob : ITranscriptionJob
 
             await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
                 new TranscriptionProcessMessage(JobStatus.Finished, fileKey, outputObjectKey));
+        }
+    }
+
+    private async Task TranscribeWithWhisperNet(string toProcessFilePath, string outputFilePath, string outputObjectKey,
+        string fileKey, CancellationToken cancellationToken)
+    {
+        if (_hostEnvironment.IsDevelopment())
+        {
+            _logger.LogInformation("Transcribing with Whisper.net");
+        }
+
+        await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
+            new TranscriptionProcessMessage(JobStatus.Processing, fileKey, outputObjectKey));
+
+        await using (var stream = File.OpenRead(toProcessFilePath))
+        await using (var writer = new StreamWriter(outputFilePath, append: false))
+        {
+            await foreach (var segment in _transcriptionService.TranscribeStreamingAsync(stream, cancellationToken))
+            {
+                var line = $"{segment.Start}->{segment.End}: {segment.Text}";
+                if (_hostEnvironment.IsDevelopment())
+                {
+                    _logger.LogInformation(line);
+                }
+
+                await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
+                    new TranscriptionProcessMessage(JobStatus.Processing, fileKey, outputObjectKey));
+
+                await writer.WriteLineAsync(line);
+            }
+        }
+    }
+
+    private async Task TranscribeWithCloudflare(string toProcessFilePath, string outputFilePath,
+        string fileKey, string outputObjectKey, CancellationToken cancellationToken)
+    {
+        if (_hostEnvironment.IsDevelopment())
+        {
+            _logger.LogInformation("Transcribing with CLoudflare");
+        }
+
+        await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
+            new TranscriptionProcessMessage(JobStatus.Processing, fileKey, outputObjectKey));
+
+        var transcriptionResult =
+            await _cloudFlareTranscriptionService.TranscribeAsync(toProcessFilePath, cancellationToken);
+
+        await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
+            new TranscriptionProcessMessage(JobStatus.Processing, fileKey, outputObjectKey));
+
+        await File.WriteAllTextAsync(outputFilePath, transcriptionResult.Text, cancellationToken);
+        if (_hostEnvironment.IsDevelopment())
+        {
+            _logger.LogInformation("Transcribed text: {Text}", transcriptionResult.Text);
         }
     }
 }
