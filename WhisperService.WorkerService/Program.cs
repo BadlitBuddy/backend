@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using Microsoft.Extensions.Options;
 using Shared.Abstractions.Jobs;
 using Shared.Abstractions.Services;
+using Shared.Contracts.Dtos;
 using Shared.Infrastructure;
 using Shared.Infrastructure.Configuration;
 using Shared.Infrastructure.Jobs;
@@ -37,6 +38,8 @@ builder.Services.AddHttpClient<CloudFlareWhisperClient>((sp, client) =>
 
 builder.Services.AddSingleton<IStreamingTranscriptionService, WhisperTranscriptionService>();
 builder.Services.AddSingleton<ITranscriptionService, CloudFlareWhisperTranscriptionService>();
+builder.Services.AddSingleton<ITranscriptionExporter, TranscriptionExporter>();
+builder.Services.AddSingleton<IStreamableTranscriptionExporter, StreamableTranscriptionExporter>();
 
 builder.Services.AddScoped<ITranscriptionJob, TranscriptionJob>();
 
