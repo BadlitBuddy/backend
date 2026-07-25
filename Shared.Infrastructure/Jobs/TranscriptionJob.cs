@@ -12,7 +12,7 @@ namespace Shared.Infrastructure.Jobs;
 
 public class TranscriptionJob : ITranscriptionJob
 {
-    private readonly ITranscriptionService _transcriptionService;
+    private readonly IStreamingTranscriptionService _transcriptionService;
     private readonly IAudioJobStorageService _audioJobStorageService;
     private readonly ILogger<TranscriptionJob> _logger;
     private readonly IHostEnvironment _hostEnvironment;
@@ -20,7 +20,7 @@ public class TranscriptionJob : ITranscriptionJob
     private readonly ITranscriptionJobRepository _transcriptionJobRepository;
 
     public TranscriptionJob(
-        ITranscriptionService transcriptionService, IAudioJobStorageService audioJobStorageService,
+        IStreamingTranscriptionService transcriptionService, IAudioJobStorageService audioJobStorageService,
         ILogger<TranscriptionJob> logger, IHostEnvironment hostEnvironment, IMessagePublisher messagePublisher,
         ITranscriptionJobRepository transcriptionJobRepository
     )

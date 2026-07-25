@@ -15,7 +15,7 @@ builder.Services
     .AddDapperContext()
     .AddDataRepositories();
 
-builder.Services.AddSingleton<ITranscriptionService, WhisperTranscriptionService>();
+builder.Services.AddSingleton<IStreamingTranscriptionService, WhisperTranscriptionService>();
 
 builder.Services.AddScoped<ITranscriptionJob, TranscriptionJob>();
 

@@ -7,7 +7,7 @@ using Whisper.net;
 
 namespace Shared.Infrastructure;
 
-public class WhisperTranscriptionService : ITranscriptionService, IDisposable
+public class WhisperTranscriptionService : IStreamingTranscriptionService, IDisposable
 {
     private readonly WhisperProcessor _processor;
     private readonly WhisperFactory _whisperFactory;

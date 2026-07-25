@@ -1,6 +1,7 @@
 namespace Shared.Abstractions.Services;
 
-public interface ITranscriptionService
+// TODO: Use ISP here for unnecessary methods
+public interface IStreamingTranscriptionService
 {
     IAsyncEnumerable<TranscriptionSegment> TranscribeAsync(Stream fileStream, CancellationToken cancellationToken);
 
