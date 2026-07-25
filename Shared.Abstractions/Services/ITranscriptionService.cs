@@ -1,9 +1,11 @@
 namespace Shared.Abstractions.Services;
 
-public interface ITranscriptionService
+public interface IStreamingTranscriptionService
 {
-    IAsyncEnumerable<TranscriptionSegment> TranscribeAsync(Stream fileStream, CancellationToken cancellationToken);
+    IAsyncEnumerable<TranscriptionSegment> TranscribeStreamingAsync(Stream fileStream,
+        CancellationToken cancellationToken);
 
+    // TODO: Use ISP here for unnecessary methods
     Task TranscribeAndWriteAsSrtFileAsync(Stream fileStream, string outputFilePath,
         CancellationToken cancellationToken);
 
@@ -12,4 +14,11 @@ public interface ITranscriptionService
 
     Task TranscribeAndWriteAsVttFileAsync(Stream fileStream, string outputFilePath,
         CancellationToken cancellationToken);
+}
+
+public interface ITranscriptionService
+{
+    Task<TranscriptionResult> TranscribeAsync(
+        string filePath,
+        CancellationToken cancellationToken = default);
 }

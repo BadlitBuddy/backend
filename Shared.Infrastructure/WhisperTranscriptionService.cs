@@ -7,7 +7,7 @@ using Whisper.net;
 
 namespace Shared.Infrastructure;
 
-public class WhisperTranscriptionService : ITranscriptionService, IDisposable
+public class WhisperTranscriptionService : IStreamingTranscriptionService, IDisposable
 {
     private readonly WhisperProcessor _processor;
     private readonly WhisperFactory _whisperFactory;
@@ -48,7 +48,7 @@ public class WhisperTranscriptionService : ITranscriptionService, IDisposable
         _whisperFactory.Dispose();
     }
 
-    public async IAsyncEnumerable<TranscriptionSegment> TranscribeAsync(
+    public async IAsyncEnumerable<TranscriptionSegment> TranscribeStreamingAsync(
         Stream fileStream,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
