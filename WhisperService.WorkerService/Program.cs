@@ -20,6 +20,9 @@ builder.Services
     .AddDapperContext()
     .AddDataRepositories();
 
+builder.Services.Configure<WorkerOptions>(
+    builder.Configuration.GetSection("TranscriptionWorker")
+);
 builder.Services.Configure<CloudflareOptions>(
     builder.Configuration.GetSection("Cloudflare")
 );
@@ -34,6 +37,10 @@ builder.Services.AddHttpClient<CloudFlareWhisperClient>((sp, client) =>
 {
     options.AttemptTimeout.Timeout = TimeSpan.FromMinutes(5);
     options.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(5);
+    options.CircuitBreaker.SamplingDuration = TimeSpan.FromMinutes(10);
+    options.CircuitBreaker.FailureRatio = 0.5;
+    options.CircuitBreaker.MinimumThroughput = 2;
+    options.CircuitBreaker.BreakDuration = TimeSpan.FromMinutes(1);
 });
 
 builder.Services.AddSingleton<IStreamingTranscriptionService, WhisperTranscriptionService>();
