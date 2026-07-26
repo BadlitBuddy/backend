@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
+using Shared.Abstractions.Services;
 using Shared.Contracts.Enums;
 
 namespace Shared.Infrastructure.Services;

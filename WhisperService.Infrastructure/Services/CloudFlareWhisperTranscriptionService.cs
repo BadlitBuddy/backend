@@ -1,8 +1,9 @@
+using Infrastructure.Dtos.TranscriptionProviderResults;
 using Shared.Abstractions.Services;
-using Shared.Infrastructure.Dtos.TranscriptionProviderResults;
-using Whisper.net;
+using Shared.Contracts.Dtos;
+using WhisperService.Core.Dtos;
 
-namespace Shared.Infrastructure.Services;
+namespace Infrastructure.Services;
 
 public class CloudFlareWhisperTranscriptionService : ITranscriptionService
 {

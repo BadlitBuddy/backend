@@ -1,4 +1,4 @@
-namespace Shared.Abstractions.ExternalServices.S3;
+namespace Shared.Abstractions.Services;
 
 public interface IAudioJobStorageService
 {

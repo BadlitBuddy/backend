@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Shared.Contracts.Dtos;
+namespace WhisperService.Core.Dtos;
 
 public record CloudflareResponse<T>
 {

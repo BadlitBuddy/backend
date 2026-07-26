@@ -1,11 +1,12 @@
 using System.Runtime.CompilerServices;
 using System.Text;
+using Infrastructure.Dtos.TranscriptionProviderResults;
 using Shared.Abstractions.Services;
 using Shared.Contracts.Constants;
-using Shared.Infrastructure.Dtos.TranscriptionProviderResults;
+using Shared.Contracts.Dtos;
 using Whisper.net;
 
-namespace Shared.Infrastructure;
+namespace Infrastructure.Services;
 
 public class WhisperTranscriptionService : IStreamingTranscriptionService, IDisposable
 {

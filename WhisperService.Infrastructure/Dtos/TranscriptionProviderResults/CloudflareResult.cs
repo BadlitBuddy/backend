@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
+using Shared.Contracts.Dtos;
 
-namespace Shared.Infrastructure.Dtos.TranscriptionProviderResults;
+namespace Infrastructure.Dtos.TranscriptionProviderResults;
 
 public sealed record CfWhisperV3TurboResponse
 {

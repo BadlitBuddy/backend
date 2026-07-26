@@ -1,6 +1,7 @@
+using Shared.Contracts.Dtos;
 using Whisper.net;
 
-namespace Shared.Infrastructure.Dtos.TranscriptionProviderResults;
+namespace Infrastructure.Dtos.TranscriptionProviderResults;
 
 public static class WhisperNetMapper
 {

@@ -1,6 +1,6 @@
 using Shared.Contracts.Enums;
 
-namespace Shared.Contracts.Dtos;
+namespace Shared.Abstractions.Services;
 
 public interface IStreamableTranscriptionExporter
 {

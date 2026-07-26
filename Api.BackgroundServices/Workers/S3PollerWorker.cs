@@ -1,6 +1,6 @@
 using Hangfire;
-using Shared.Abstractions.ExternalServices.S3;
 using Shared.Abstractions.Jobs;
+using Shared.Abstractions.Services;
 
 namespace Api.BackgroundServices.Workers;
 
