@@ -1,11 +1,20 @@
 namespace Shared.Abstractions.Services;
 
+public abstract record TranscriptionSource
+{
+    public sealed record FilePath(string Path) : TranscriptionSource;
+
+    public sealed record Url(Uri Uri) : TranscriptionSource;
+
+    public sealed record Stream(System.IO.Stream StreamContent) : TranscriptionSource;
+}
+
 public interface IStreamingTranscriptionService
 {
     IAsyncEnumerable<TranscriptionSegment> TranscribeStreamingAsync(Stream fileStream,
         CancellationToken cancellationToken);
 
-    // TODO: Use ISP here for unnecessary methods
+    // TODO: remove unnecessary methods
     Task TranscribeAndWriteAsSrtFileAsync(Stream fileStream, string outputFilePath,
         CancellationToken cancellationToken);
 
@@ -19,6 +28,6 @@ public interface IStreamingTranscriptionService
 public interface ITranscriptionService
 {
     Task<TranscriptionResult> TranscribeAsync(
-        string filePath,
+        TranscriptionSource source,
         CancellationToken cancellationToken = default);
 }

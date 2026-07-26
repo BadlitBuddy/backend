@@ -15,7 +15,19 @@ public class CloudFlareWhisperTranscriptionService : ITranscriptionService
         _cloudFlareWhisperClient = cloudFlareWhisperClient;
     }
 
-    public async Task<TranscriptionResult> TranscribeAsync(string filePath,
+    public async Task<TranscriptionResult> TranscribeAsync(TranscriptionSource source,
+        CancellationToken cancellationToken)
+    {
+        return source switch
+        {
+            TranscriptionSource.FilePath pathSource =>
+                await TranscribeViaFilePathAsync(pathSource.Path, cancellationToken),
+            _ => throw new NotSupportedException(
+                $"Audio source {source.GetType().Name} is not supported by this provider.")
+        };
+    }
+
+    private async Task<TranscriptionResult> TranscribeViaFilePathAsync(string filePath,
         CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrEmpty(filePath);
