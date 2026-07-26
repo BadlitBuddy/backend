@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Shared.Abstractions.ExternalServices.S3;
 using Shared.Abstractions.Jobs;
 using Shared.Abstractions.Repositories;
 using Shared.Abstractions.Services;

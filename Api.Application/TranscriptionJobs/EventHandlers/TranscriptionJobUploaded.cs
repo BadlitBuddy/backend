@@ -1,7 +1,7 @@
 using Api.Domain.Events;
 using Microsoft.Extensions.Logging;
-using Shared.Abstractions.ExternalServices.S3;
 using Shared.Abstractions.Jobs;
+using Shared.Abstractions.Services;
 
 namespace Api.Application.TranscriptionJobs.EventHandlers;
 

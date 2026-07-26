@@ -1,8 +1,9 @@
 using System.Net;
 using System.Text.Json;
 using Shared.Infrastructure.Services;
+using WhisperService.Core.Dtos;
 
-namespace Shared.Infrastructure.Helpers;
+namespace Infrastructure.Helpers;
 
 public sealed class WhisperStreamingJsonContent : HttpContent
 {

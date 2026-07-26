@@ -1,8 +1,9 @@
 using System.Net.Http.Json;
-using Shared.Infrastructure.Dtos.TranscriptionProviderResults;
-using Shared.Infrastructure.Helpers;
+using Infrastructure.Dtos.TranscriptionProviderResults;
+using Infrastructure.Helpers;
+using WhisperService.Core.Dtos;
 
-namespace Shared.Infrastructure.Services;
+namespace Infrastructure.Services;
 
 public class CloudFlareWhisperClient
 {

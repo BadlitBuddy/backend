@@ -1,5 +1,5 @@
 using Api.Application.Common.Interfaces;
-using Shared.Abstractions.ExternalServices.S3;
+using Shared.Abstractions.Services;
 using Shared.Contracts.Dtos;
 
 namespace Api.Application.Files.Queries.GetUploadPresignedUrl;

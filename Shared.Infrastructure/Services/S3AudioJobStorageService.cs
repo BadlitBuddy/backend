@@ -1,12 +1,11 @@
-using System.Buffers.Binary;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NanoidDotNet;
-using Shared.Abstractions.ExternalServices.S3;
+using Shared.Abstractions.Services;
 
-namespace Shared.Infrastructure.ExternalServices.S3;
+namespace Shared.Infrastructure.Services;
 
 public class S3AudioJobStorageService : IAudioJobStorageService
 {
