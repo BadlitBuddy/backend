@@ -3,7 +3,7 @@ using Infrastructure.Dtos.TranscriptionProviderResults;
 using Infrastructure.Helpers;
 using WhisperService.Core.Dtos;
 
-namespace Infrastructure.Services;
+namespace Infrastructure.Clients;
 
 public class CloudFlareWhisperClient
 {

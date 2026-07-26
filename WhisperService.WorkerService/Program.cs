@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using Infrastructure.Clients;
 using Infrastructure.Services;
 using Microsoft.Extensions.Options;
 using Shared.Abstractions.Jobs;

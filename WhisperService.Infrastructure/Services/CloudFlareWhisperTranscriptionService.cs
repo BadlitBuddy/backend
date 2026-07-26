@@ -1,3 +1,4 @@
+using Infrastructure.Clients;
 using Infrastructure.Dtos.TranscriptionProviderResults;
 using Shared.Abstractions.Services;
 using Shared.Contracts.Dtos;
