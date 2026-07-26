@@ -2,9 +2,7 @@ using System.Buffers;
 using System.Buffers.Text;
 using System.Runtime.CompilerServices;
 using FFMpegCore;
-using FFMpegCore.Pipes;
 using NanoidDotNet;
-using Shared.Abstractions.Services;
 
 namespace Shared.Infrastructure.Services;
 
@@ -185,6 +183,41 @@ public static class MediaFilePreprocessor
                         .WithAudioCodec("pcm_s16le")
                         .ForceFormat("wav");
                 })
+                .CancellableThrough(cancellationToken)
+                .ProcessAsynchronously();
+
+            return tempOutputPath;
+        }
+        catch
+        {
+            if (File.Exists(tempOutputPath))
+            {
+                File.Delete(tempOutputPath);
+            }
+
+            throw;
+        }
+    }
+
+    public static async Task<string> ConvertWavToFlacAndWriteToTmpAsync(
+        string filePath,
+        CancellationToken cancellationToken = default)
+    {
+        if (!File.Exists(filePath))
+            throw new FileNotFoundException("WAV file not found.", filePath);
+
+        var shortId = await Nanoid.GenerateAsync(size: 8);
+        var tempOutputPath = Path.Combine(Path.GetTempPath(), $"{shortId}.flac");
+        try
+        {
+            await FFMpegArguments
+                .FromFileInput(filePath, verifyExists: true)
+                .OutputToFile(tempOutputPath, overwrite: true, options => options
+                    .WithAudioSamplingRate(16000)
+                    .WithCustomArgument("-ac 1")
+                    .WithCustomArgument("-map 0:a")
+                    .WithAudioCodec("flac")
+                    .ForceFormat("flac"))
                 .CancellableThrough(cancellationToken)
                 .ProcessAsynchronously();
 
