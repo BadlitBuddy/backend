@@ -2,6 +2,7 @@ using Api.Application;
 using Api.Infrastructure;
 using Api.Infrastructure.Data;
 using Api.Web;
+using Hangfire;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Scalar.AspNetCore;
@@ -28,7 +29,11 @@ var app = builder.Build();
 
 await app.InitialiseDatabaseAsync();
 
-app.UseHangFireDashboard();
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = [new HangfireAuthFilter()]
+});
+
 app.UseHttpsRedirection();
 app.UseCors("CorsPolicy");
 app.MapOpenApi();
