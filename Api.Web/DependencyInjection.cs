@@ -23,20 +23,16 @@ public static class DependencyInjection
         builder.Services.AddEndpointsApiExplorer();
 
         builder.Services.AddOpenApi();
-        string clientDomain = builder.Configuration["ClientOptions:ClientDomain"] ?? "http://localhost:3000";
-
-        var uriBuilder = new UriBuilder(clientDomain);
-        uriBuilder.Scheme = Uri.UriSchemeHttp;
-        var httpClientUrl = uriBuilder.Uri.ToString().TrimEnd('/');
-        uriBuilder.Scheme = Uri.UriSchemeHttps;
-        var httpsClientUrl = uriBuilder.Uri.ToString().TrimEnd('/');
+        
+        var allowedOrigins = builder.Configuration
+            .GetSection("AllowedOrigins")
+            .Get<string[]>() ?? [];
 
         builder.Services.AddCors(options =>
         {
             options.AddPolicy("CorsPolicy", policy =>
             {
-                policy.WithOrigins(httpsClientUrl, httpClientUrl)
-                    .AllowAnyHeader()
+                policy.WithOrigins(allowedOrigins)
                     .AllowAnyMethod()
                     .AllowCredentials();
             });
