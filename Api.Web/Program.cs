@@ -54,7 +54,9 @@ app.MapHealthChecks("/alive", new HealthCheckOptions
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.UseExceptionHandler(options => { });
+app.Map("/", () => Results.Redirect("/scalar"));
+
 app.MapEndpoints(typeof(Program).Assembly);
 
-app.UseHttpsRedirection();
 app.Run();
