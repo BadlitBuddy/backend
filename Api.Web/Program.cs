@@ -1,5 +1,6 @@
 using Api.Application;
 using Api.Infrastructure;
+using Api.Infrastructure.Data;
 using Api.Web;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -24,6 +25,8 @@ builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
 
 var app = builder.Build();
+
+await app.InitialiseDatabaseAsync();
 
 app.UseHangFireDashboard();
 app.UseHttpsRedirection();

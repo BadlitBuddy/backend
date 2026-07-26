@@ -1,5 +1,6 @@
 using System.Text;
 using Api.Application.Common.Interfaces;
+using Api.Infrastructure.Data;
 using Api.Infrastructure.Data.Interceptors;
 using Api.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authentication.Google;
@@ -30,6 +31,7 @@ public static class DependencyInjection
 
         builder.Services.AddScoped<IApplicationDbContext>(provider =>
             provider.GetRequiredService<ApplicationDbContext>());
+        builder.Services.AddScoped<ApplicationDbContextInitialiser>();
 
         var jwtSettings = builder.Configuration.GetSection("Jwt");
         var secretKey = jwtSettings.GetSection("Key").Value;
