@@ -35,14 +35,13 @@ if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
     app.UseMigrationsEndPoint();
-
-    app.MapHealthChecks("/health");
-
-    app.MapHealthChecks("/alive", new HealthCheckOptions
-    {
-        Predicate = r => r.Tags.Contains("live")
-    });
 }
+
+app.MapHealthChecks("/health");
+app.MapHealthChecks("/alive", new HealthCheckOptions
+{
+    Predicate = r => r.Tags.Contains("live")
+});
 
 app.UseAuthentication();
 app.UseAuthorization();
