@@ -1,4 +1,5 @@
 using Shared.Contracts.Dtos;
+using Shared.Contracts.Enums;
 using Whisper.net;
 
 namespace Infrastructure.Dtos.TranscriptionProviderResults;
