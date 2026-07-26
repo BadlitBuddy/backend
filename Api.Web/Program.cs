@@ -29,13 +29,16 @@ var app = builder.Build();
 
 await app.InitialiseDatabaseAsync();
 
+app.UseForwardedHeaders();
+app.UseCors("CorsPolicy");
+app.UseRateLimiter();
+
 app.UseHangfireDashboard("/hangfire", new DashboardOptions
 {
     Authorization = [new HangfireAuthFilter()]
 });
 
 app.UseHttpsRedirection();
-app.UseCors("CorsPolicy");
 app.MapOpenApi();
 app.MapScalarApiReference();
 
