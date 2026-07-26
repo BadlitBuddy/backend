@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using Shared.Contracts.Enums;
 
 namespace Shared.Contracts.Dtos;
 
@@ -7,14 +8,6 @@ public enum TranscriptionTask
 {
     [Description("Transcribe")] Transcribe,
     [Description("Translate")] Translate
-}
-
-/// <summary> Transcription Provider </summary>
-public enum TranscriptionProvider
-{
-    [Description("Whisper.net")] WhisperNet,
-    [Description("Groq")] Groq,
-    [Description("Cloudflare")] Cloudflare
 }
 
 /// <summary>

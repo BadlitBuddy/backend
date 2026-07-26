@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Shared.Contracts.Dtos;
+using Shared.Contracts.Enums;
 
 namespace Infrastructure.Dtos.TranscriptionProviderResults;
 

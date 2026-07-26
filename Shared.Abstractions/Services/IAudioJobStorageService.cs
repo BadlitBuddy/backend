@@ -15,4 +15,6 @@ public interface IAudioJobStorageService
 
     Task<Stream> DownloadAudioAsync(string fileKey, CancellationToken cancellationToken);
     Task<bool> DeleteAudioAsync(string fileKey, CancellationToken cancellationToken);
+    
+    Task<Uri> CreateDownloadUrlAsync(string fileKey, CancellationToken cancellationToken = default);
 }

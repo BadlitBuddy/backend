@@ -230,4 +230,20 @@ public class S3AudioJobStorageService : IAudioJobStorageService
             return false;
         }
     }
+
+    public async Task<Uri> CreateDownloadUrlAsync(string fileKey, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var request = new GetPreSignedUrlRequest
+        {
+            BucketName = _options.Value.BucketName,
+            Key = fileKey,
+            Verb = HttpVerb.GET,
+            Expires = DateTime.UtcNow.AddHours(1)
+        };
+
+        string url = await _s3Client.GetPreSignedURLAsync(request);
+        return new Uri(url);
+    }
 }

@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Shared.Contracts.Dtos;
+using Shared.Contracts.Enums;
 
 namespace Infrastructure.Dtos.TranscriptionProviderResults;
 
@@ -36,7 +37,6 @@ public sealed record GroqWord
     [JsonPropertyName("word")] public string Word { get; init; } = "";
     [JsonPropertyName("start")] public double Start { get; init; }
     [JsonPropertyName("end")] public double End { get; init; }
-    [JsonPropertyName("probability")] public double Probability { get; init; }
 }
 
 public static class GroqMapper
@@ -78,7 +78,6 @@ public static class GroqMapper
     {
         Word = w.Word,
         Start = TimeSpan.FromSeconds(w.Start),
-        End = TimeSpan.FromSeconds(w.End),
-        Probability = w.Probability
+        End = TimeSpan.FromSeconds(w.End)
     };
 }

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -18,13 +19,18 @@ public class TranscriptionJob : ITranscriptionJob
     private readonly IMessagePublisher _messagePublisher;
     private readonly ITranscriptionJobRepository _transcriptionJobRepository;
     private readonly ITranscriptionService _cloudFlareTranscriptionService;
+    private readonly ITranscriptionService _groqTranscriptionService;
     private readonly WorkerOptions _workerOptions;
 
     public TranscriptionJob(
         IStreamingTranscriptionService transcriptionService, IAudioJobStorageService audioJobStorageService,
         ILogger<TranscriptionJob> logger, IHostEnvironment hostEnvironment, IMessagePublisher messagePublisher,
-        ITranscriptionJobRepository transcriptionJobRepository, ITranscriptionService cloudFlareTranscriptionService,
-        IOptions<WorkerOptions> workerOptions)
+        ITranscriptionJobRepository transcriptionJobRepository, IOptions<WorkerOptions> workerOptions,
+        [FromKeyedServices(TranscriptionProvider.Cloudflare)]
+        ITranscriptionService cloudFlareTranscriptionService,
+        [FromKeyedServices(TranscriptionProvider.Groq)]
+        ITranscriptionService groqTranscriptionService
+    )
     {
         _transcriptionService = transcriptionService;
         _audioJobStorageService = audioJobStorageService;
@@ -33,6 +39,7 @@ public class TranscriptionJob : ITranscriptionJob
         _messagePublisher = messagePublisher;
         _transcriptionJobRepository = transcriptionJobRepository;
         _cloudFlareTranscriptionService = cloudFlareTranscriptionService;
+        _groqTranscriptionService = groqTranscriptionService;
         _workerOptions = workerOptions.Value;
     }
 
@@ -82,7 +89,8 @@ public class TranscriptionJob : ITranscriptionJob
                         cancellationToken);
                     break;
                 case TranscriptionProvider.Groq:
-                    throw new NotImplementedException("Groq currently not implemented");
+                    await TranscribeWithGroq(outputFilePath, fileKey, outputObjectKey, cancellationToken);
+                    break;
                 case TranscriptionProvider.Cloudflare:
                     await TranscribeWithCloudflare(toProcessFilePath, outputFilePath, fileKey, outputObjectKey,
                         cancellationToken);
@@ -158,6 +166,33 @@ public class TranscriptionJob : ITranscriptionJob
         }
     }
 
+    private async Task TranscribeWithGroq(string outputFilePath, string fileKey, string outputObjectKey,
+        CancellationToken cancellationToken)
+    {
+        if (_hostEnvironment.IsDevelopment())
+        {
+            _logger.LogInformation("Transcribing with Groq");
+        }
+
+        await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
+            new TranscriptionProcessMessage(JobStatus.Processing, fileKey, outputObjectKey));
+
+        var fileUri = await _audioJobStorageService.CreateDownloadUrlAsync(fileKey, cancellationToken);
+
+        var transcriptionResult =
+            await _groqTranscriptionService.TranscribeAsync(new TranscriptionSource.Url(fileUri),
+                cancellationToken);
+
+        await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
+            new TranscriptionProcessMessage(JobStatus.Processing, fileKey, outputObjectKey));
+
+        await File.WriteAllTextAsync(outputFilePath, transcriptionResult.Text, cancellationToken);
+        if (_hostEnvironment.IsDevelopment())
+        {
+            _logger.LogInformation("Transcribed text: {Text}", transcriptionResult.Text);
+        }
+    }
+
     private async Task TranscribeWithCloudflare(string toProcessFilePath, string outputFilePath,
         string fileKey, string outputObjectKey, CancellationToken cancellationToken)
     {
@@ -170,7 +205,8 @@ public class TranscriptionJob : ITranscriptionJob
             new TranscriptionProcessMessage(JobStatus.Processing, fileKey, outputObjectKey));
 
         var transcriptionResult =
-            await _cloudFlareTranscriptionService.TranscribeAsync(toProcessFilePath, cancellationToken);
+            await _cloudFlareTranscriptionService.TranscribeAsync(new TranscriptionSource.FilePath(toProcessFilePath),
+                cancellationToken);
 
         await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
             new TranscriptionProcessMessage(JobStatus.Processing, fileKey, outputObjectKey));
