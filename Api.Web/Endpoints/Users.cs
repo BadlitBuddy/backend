@@ -225,7 +225,7 @@ public class Users : IEndpointGroup
             context.Response.Cookies.Append("AuthToken", tokens.AccessToken, new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true,
+                Secure = !environment.IsDevelopment(),
                 SameSite = SameSiteMode.Strict,
                 Expires = DateTime.UtcNow.AddMinutes(jwtOptions.Value.AccessTokenExpirationMinutes ?? 5),
                 Path = "/"
@@ -233,7 +233,7 @@ public class Users : IEndpointGroup
             context.Response.Cookies.Append("RefreshToken", tokens.RefreshToken, new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true,
+                Secure = !environment.IsDevelopment(),
                 SameSite = SameSiteMode.Strict,
                 Expires = DateTime.UtcNow.AddDays(jwtOptions.Value.RefreshTokenExpirationDays ?? 1),
                 Path = "/api/users"
