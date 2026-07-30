@@ -1,0 +1,23 @@
+name: wordscribe
+services:
+  api:
+    build:
+      context: .
+      dockerfile: api.Dockerfile
+    image: kjbdev/bb-api:1.0.0
+    container_name: bb-api
+    ports:
+      - "5000:8080"
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  whisper-service:
+    build:
+      context: .
+      dockerfile: whisper-service.Dockerfile
+    image: kjbbdev/bb-whisper-service:1.0.0
+    container_name: bb-whisper-service
+    env_file:
+      - .env
+    restart: unless-stopped
