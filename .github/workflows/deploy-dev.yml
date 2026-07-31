@@ -1,0 +1,77 @@
+name: CD - Deploy to Dev
+
+on:
+  workflow_run:
+    workflows: ["CI - Build and Push Docker Images"]
+    types: [completed]
+    branches: ["dev"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-dev-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-dev:
+    name: Deploy Services to Cloud Run
+    environment: development
+    timeout-minutes: 15
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy API Service to Cloud Run
+        run: |
+          IMAGE_TAG="dev"
+          if [ "${{ github.event_name }}" = "workflow_run" ] && [ -n "${{ github.event.workflow_run.head_sha }}" ]; then
+            SHORT_SHA=$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-7)
+            IMAGE_TAG="sha-${SHORT_SHA}"
+          fi
+          echo "Deploying bb-api image tag: ${IMAGE_TAG}"
+          gcloud run deploy bb-api \
+            --image=docker.io/${{ secrets.DOCKER_USERNAME }}/bb-api:${IMAGE_TAG} \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --region=${{ secrets.GCP_REGION }} \
+            --allow-unauthenticated \
+            --cpu-throttling \
+            --min-instances=0 \
+            --max-instances=1 \
+            --cpu=1 \
+            --memory=512Mi \
+            --concurrency=50
+
+      - name: Deploy Whisper Service to Cloud Run
+        run: |
+          IMAGE_TAG="dev"
+          if [ "${{ github.event_name }}" = "workflow_run" ] && [ -n "${{ github.event.workflow_run.head_sha }}" ]; then
+            SHORT_SHA=$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-7)
+            IMAGE_TAG="sha-${SHORT_SHA}"
+          fi
+          echo "Deploying bb-whisper-service image tag: ${IMAGE_TAG}"
+          gcloud run deploy bb-whisper-service \
+            --image=docker.io/${{ secrets.DOCKER_USERNAME }}/bb-whisper-service:${IMAGE_TAG} \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --region=${{ secrets.GCP_REGION }} \
+            --allow-unauthenticated \
+            --cpu-throttling \
+            --min-instances=0 \
+            --max-instances=1 \
+            --cpu=1 \
+            --memory=1024Mi \
+            --concurrency=50
