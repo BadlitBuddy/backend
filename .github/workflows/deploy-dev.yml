@@ -2,9 +2,9 @@ name: CD - Deploy to Dev
 
 on:
   workflow_run:
-    workflows: ["CI - Build and Push Docker Images"]
-    types: [completed]
-    branches: ["dev"]
+    workflows: [ "CI - Build and Push Docker Images" ]
+    types: [ completed ]
+    branches: [ "dev" ]
   workflow_dispatch:
 
 permissions:
@@ -54,7 +54,14 @@ jobs:
             --max-instances=1 \
             --cpu=1 \
             --memory=512Mi \
-            --concurrency=50
+            --concurrency=50 \
+            --remove-startup-cpu-boost \
+            --startup-probe-http-path=/health \
+            --startup-probe-initial-delay=5s \
+            --startup-probe-period=10s \
+            --startup-probe-failure-threshold=3 \
+            --liveness-probe-http-path=/alive \
+            --liveness-probe-period=20s
 
       - name: Deploy Whisper Service to Cloud Run
         run: |
@@ -74,4 +81,10 @@ jobs:
             --max-instances=1 \
             --cpu=1 \
             --memory=1024Mi \
-            --concurrency=50
+            --concurrency=50 \
+            --startup-probe-http-path=/live \
+            --startup-probe-initial-delay=5s \
+            --startup-probe-period=10s \
+            --startup-probe-failure-threshold=3 \
+            --liveness-probe-http-path=/live \
+            --liveness-probe-period=20s
