@@ -10,8 +10,29 @@ using Shared.Infrastructure;
 using Shared.Infrastructure.Configuration;
 using Shared.Infrastructure.Jobs;
 using Shared.Infrastructure.Services;
+using TinyHealthCheck;
+using WhisperService.WorkerService.Configuration;
 
 var builder = Host.CreateApplicationBuilder(args);
+
+var healthOptions = builder.Configuration
+    .GetSection("HealthCheck")
+    .Get<HealthCheckOptions>();
+
+builder.Services.Configure<HealthCheckOptions>(
+    builder.Configuration.GetSection("HealthCheck")
+);
+
+if (healthOptions?.EnableHealthCheck == true)
+{
+    builder.Services.AddBasicTinyHealthCheck(config =>
+    {
+        config.Port = healthOptions.Port ?? 8080;
+        config.UrlPath = healthOptions.Path ?? "/healthz";
+        config.Hostname = "*";
+        return config;
+    });
+}
 
 builder.Services
     .AddConnectionStringsConfiguration(builder.Configuration)
