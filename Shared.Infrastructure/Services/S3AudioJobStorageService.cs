@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NanoidDotNet;
 using Shared.Abstractions.Services;
+using Shared.Infrastructure.Storage;
 
 namespace Shared.Infrastructure.Services;
 
@@ -133,8 +134,7 @@ public class S3AudioJobStorageService : IAudioJobStorageService
             throw new ArgumentException("Only .wav files are supported.");
         }
 
-        var shortId = await Nanoid.GenerateAsync(size: 10);
-        var objectKey = $"{userId}/unprocessed/{shortId}-{Path.GetFileName(originalFileName)}";
+        var objectKey = await StoragePathBuilder.ForUnprocessedFileAsync(userId, originalFileName);
         var request = new GetPreSignedUrlRequest()
         {
             BucketName = _options.Value.BucketName,
@@ -177,8 +177,7 @@ public class S3AudioJobStorageService : IAudioJobStorageService
             throw new ArgumentException("Only .txt files can be uploaded.");
         }
 
-        var shortId = await Nanoid.GenerateAsync(size: 10);
-        var objectKey = $"{userId}/processed/{shortId}-{Path.GetFileName(originalFileName)}";
+        var objectKey = await StoragePathBuilder.ForProcessedFileAsync(userId, originalFileName);
 
         var request = new PutObjectRequest
         {
