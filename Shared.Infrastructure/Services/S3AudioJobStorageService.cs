@@ -2,8 +2,8 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using NanoidDotNet;
 using Shared.Abstractions.Services;
+using Shared.Abstractions.Storage;
 using Shared.Infrastructure.Storage;
 
 namespace Shared.Infrastructure.Services;
@@ -14,15 +14,18 @@ public class S3AudioJobStorageService : IAudioJobStorageService
     private readonly IAmazonS3 _s3Client;
     private readonly IOptions<S3Options> _options;
     private readonly ILogger<S3AudioJobStorageService> _logger;
+    private readonly IStoragePathBuilder _storagePathBuilder;
 
     public S3AudioJobStorageService(
         IAmazonS3 s3Client, IOptions<S3Options> options,
-        ILogger<S3AudioJobStorageService> logger
+        ILogger<S3AudioJobStorageService> logger,
+        IStoragePathBuilder storagePathBuilder
     )
     {
         _s3Client = s3Client;
         _options = options;
         _logger = logger;
+        _storagePathBuilder = storagePathBuilder;
     }
 
     public async Task<bool> IsStorageAvailableAsync(CancellationToken cancellationToken)
@@ -134,7 +137,7 @@ public class S3AudioJobStorageService : IAudioJobStorageService
             throw new ArgumentException("Only .wav files are supported.");
         }
 
-        var objectKey = await StoragePathBuilder.ForUnprocessedFileAsync(userId, originalFileName);
+        var objectKey = await _storagePathBuilder.ForUnprocessedFileAsync(userId, originalFileName);
         var request = new GetPreSignedUrlRequest()
         {
             BucketName = _options.Value.BucketName,
@@ -177,7 +180,7 @@ public class S3AudioJobStorageService : IAudioJobStorageService
             throw new ArgumentException("Only .txt files can be uploaded.");
         }
 
-        var objectKey = await StoragePathBuilder.ForProcessedFileAsync(userId, originalFileName);
+        var objectKey = await _storagePathBuilder.ForProcessedFileAsync(userId, originalFileName);
 
         var request = new PutObjectRequest
         {
