@@ -18,7 +18,8 @@ public static class TranscriptMappingExtensions
             OriginalProcessedFileName = !string.IsNullOrWhiteSpace(entity.ProcessedObjectKey)
                 ? storagePathBuilder.ExtractProcessedFileKeyParts(entity.ProcessedObjectKey).originalName
                 : null,
-            JobStatus = entity.JobStatus
+            JobStatus = entity.JobStatus,
+            CreatedAt = entity.Created
         };
     }
 }

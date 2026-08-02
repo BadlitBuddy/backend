@@ -12,4 +12,6 @@ public class TranscriptDto
 
     public TranscriptionJobStatus JobStatus { get; set; }
     public string JobStatusDesc => JobStatus.GetDescription();
+
+    public required DateTimeOffset CreatedAt { get; set; }
 }
