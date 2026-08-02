@@ -35,6 +35,7 @@ if (healthOptions?.EnableHealthCheck == true)
 }
 
 builder.Services
+    .AddSharedServices()
     .AddConnectionStringsConfiguration(builder.Configuration)
     .AddS3Configuration(builder.Configuration)
     .AddS3Services()
