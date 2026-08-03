@@ -12,6 +12,7 @@ using Microsoft.Extensions.Options;
 using Shared.Infrastructure.Configuration;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.IdentityModel.Tokens;
+using Shared.Infrastructure;
 
 namespace Api.Infrastructure;
 
@@ -19,6 +20,7 @@ public static class DependencyInjection
 {
     public static void AddInfrastructureServices(this IHostApplicationBuilder builder)
     {
+        builder.Services.AddSharedServices();
         builder.Services.AddScoped<ISaveChangesInterceptor, AuditingAndSoftDeleteInterceptor>();
         builder.Services.AddScoped<ISaveChangesInterceptor, DispatchDomainEventsInterceptor>();
 
