@@ -4,7 +4,7 @@ services:
     build:
       context: .
       dockerfile: api.Dockerfile
-    image: kjbdev/bb-api:1.0.0
+    image: kjbdev/bb-api:dev
     container_name: bb-api
     ports:
       - "5000:8080"
@@ -16,8 +16,10 @@ services:
     build:
       context: .
       dockerfile: whisper-service.Dockerfile
-    image: kjbbdev/bb-whisper-service:1.0.0
+    image: kjbdev/bb-whisper-service:dev
     container_name: bb-whisper-service
+    ports:
+      - "5001:8080"
     env_file:
       - .env
     restart: unless-stopped
