@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using Shared.Abstractions.Jobs;
 using Shared.Abstractions.Repositories;
 using Shared.Abstractions.Services;
+using Shared.Contracts.DtoMappers;
 using Shared.Contracts.Enums;
 using TranscriptionJobStatus = Api.Domain.Enums.TranscriptionJobStatus;
 
@@ -18,6 +19,7 @@ public class TranscriptionJob : ITranscriptionJob
     private readonly IHostEnvironment _hostEnvironment;
     private readonly IMessagePublisher _messagePublisher;
     private readonly ITranscriptionJobRepository _transcriptionJobRepository;
+    private readonly IStreamableTranscriptionExporter _streamableTranscriptionExporter;
     private readonly ITranscriptionService _cloudFlareTranscriptionService;
     private readonly ITranscriptionService _groqTranscriptionService;
     private readonly WorkerOptions _workerOptions;
@@ -26,6 +28,7 @@ public class TranscriptionJob : ITranscriptionJob
         IStreamingTranscriptionService transcriptionService, IAudioJobStorageService audioJobStorageService,
         ILogger<TranscriptionJob> logger, IHostEnvironment hostEnvironment, IMessagePublisher messagePublisher,
         ITranscriptionJobRepository transcriptionJobRepository, IOptions<WorkerOptions> workerOptions,
+        IStreamableTranscriptionExporter streamableTranscriptionExporter,
         [FromKeyedServices(TranscriptionProvider.Cloudflare)]
         ITranscriptionService cloudFlareTranscriptionService,
         [FromKeyedServices(TranscriptionProvider.Groq)]
@@ -38,6 +41,7 @@ public class TranscriptionJob : ITranscriptionJob
         _hostEnvironment = hostEnvironment;
         _messagePublisher = messagePublisher;
         _transcriptionJobRepository = transcriptionJobRepository;
+        _streamableTranscriptionExporter = streamableTranscriptionExporter;
         _cloudFlareTranscriptionService = cloudFlareTranscriptionService;
         _groqTranscriptionService = groqTranscriptionService;
         _workerOptions = workerOptions.Value;
@@ -60,7 +64,7 @@ public class TranscriptionJob : ITranscriptionJob
 
         string toProcessFilePath = Path.Combine(toProcessDir, Path.GetFileName(fileKey));
 
-        string outputFileName = Path.ChangeExtension(Path.GetFileName(fileKey), ".txt");
+        string outputFileName = Path.ChangeExtension(Path.GetFileName(fileKey), ".json");
         string outputFilePath = Path.Combine(processedDir, outputFileName);
 
         var parts = fileKey.Split('/');
@@ -105,9 +109,10 @@ public class TranscriptionJob : ITranscriptionJob
                              bufferSize: 4096,
                              useAsync: true))
             {
+                var originalFileNameJson = Path.ChangeExtension(originalFileName, ".json");
                 var uploadResult = await _audioJobStorageService.UploadTranscriptionAsync(
                     userId,
-                    originalFileName,
+                    originalFileNameJson,
                     uploadStream,
                     cancellationToken);
 
@@ -145,23 +150,30 @@ public class TranscriptionJob : ITranscriptionJob
         await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
             new TranscriptionProcessMessage(JobStatus.Processing, fileKey, null));
 
-        await using (var stream = File.OpenRead(toProcessFilePath))
-        await using (var writer = new StreamWriter(outputFilePath, append: false))
+        await using var stream = File.OpenRead(toProcessFilePath);
+        var segments = new List<TranscriptionSegment>();
+
+        await foreach (var segment in _transcriptionService.TranscribeStreamingAsync(stream, cancellationToken))
         {
-            await foreach (var segment in _transcriptionService.TranscribeStreamingAsync(stream, cancellationToken))
+            segments.Add(segment);
+
+            if (_hostEnvironment.IsDevelopment())
             {
-                var line = $"{segment.Start}->{segment.End}: {segment.Text}";
-                if (_hostEnvironment.IsDevelopment())
-                {
-                    _logger.LogInformation(line);
-                }
-
-                await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
-                    new TranscriptionProcessMessage(JobStatus.Processing, fileKey, null));
-
-                await writer.WriteLineAsync(line);
+                _logger.LogInformation($"{segment.Start}->{segment.End}: {segment.Text}");
             }
+
+            await _messagePublisher.PublishAsync(
+                MessageChannel.TranscriptionProcess,
+                new TranscriptionProcessMessage(JobStatus.Processing, fileKey, null));
         }
+
+        TranscriptionResult transcriptionResult = segments.ToTranscriptionResult(
+            task: TranscriptionTask.Transcribe,
+            providerModelId: TranscriptionProvider.WhisperNet
+        );
+
+        await using var fileStream = File.Create(outputFilePath);
+        await _streamableTranscriptionExporter.ToJsonAsync(transcriptionResult, fileStream, cancellationToken);
     }
 
     private async Task TranscribeWithGroq(string outputFilePath, string fileKey,
@@ -184,7 +196,9 @@ public class TranscriptionJob : ITranscriptionJob
         await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
             new TranscriptionProcessMessage(JobStatus.Processing, fileKey, null));
 
-        await File.WriteAllTextAsync(outputFilePath, transcriptionResult.Text, cancellationToken);
+        await using var fileStream = File.Create(outputFilePath);
+        await _streamableTranscriptionExporter.ToJsonAsync(transcriptionResult, fileStream, cancellationToken);
+
         if (_hostEnvironment.IsDevelopment())
         {
             _logger.LogInformation("Transcribed text: {Text}", transcriptionResult.Text);
@@ -209,7 +223,9 @@ public class TranscriptionJob : ITranscriptionJob
         await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
             new TranscriptionProcessMessage(JobStatus.Processing, fileKey, null));
 
-        await File.WriteAllTextAsync(outputFilePath, transcriptionResult.Text, cancellationToken);
+        await using var fileStream = File.Create(outputFilePath);
+        await _streamableTranscriptionExporter.ToJsonAsync(transcriptionResult, fileStream, cancellationToken);
+
         if (_hostEnvironment.IsDevelopment())
         {
             _logger.LogInformation("Transcribed text: {Text}", transcriptionResult.Text);
