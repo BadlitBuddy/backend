@@ -67,8 +67,7 @@ public class TranscriptionJob : ITranscriptionJob
         var userId = parts[0];
         var originalFileName = Path.ChangeExtension(parts[^1].Substring(11), ".txt");
 
-        var outputObjectKey = "";
-
+        string? outputObjectKey = null;
         try
         {
             _logger.LogInformation("Starting Whisper transcription for: {FileKey}", fileKey);
@@ -79,21 +78,20 @@ public class TranscriptionJob : ITranscriptionJob
                 await s3Stream.CopyToAsync(fileStream, cancellationToken);
             }
 
-            await _transcriptionJobRepository.UpdateStatusAsync(fileKey, outputObjectKey,
+            await _transcriptionJobRepository.UpdateStatusAsync(fileKey, null,
                 TranscriptionJobStatus.Processing, new Guid(userId));
 
             switch (_workerOptions.TranscriptionProvider)
             {
                 case TranscriptionProvider.WhisperNet:
-                    await TranscribeWithWhisperNet(toProcessFilePath, outputFilePath, outputObjectKey, fileKey,
+                    await TranscribeWithWhisperNet(toProcessFilePath, outputFilePath, fileKey,
                         cancellationToken);
                     break;
                 case TranscriptionProvider.Groq:
-                    await TranscribeWithGroq(outputFilePath, fileKey, outputObjectKey, cancellationToken);
+                    await TranscribeWithGroq(outputFilePath, fileKey, cancellationToken);
                     break;
                 case TranscriptionProvider.Cloudflare:
-                    await TranscribeWithCloudflare(toProcessFilePath, outputFilePath, fileKey, outputObjectKey,
-                        cancellationToken);
+                    await TranscribeWithCloudflare(toProcessFilePath, outputFilePath, fileKey, cancellationToken);
                     break;
                 default:
                     throw new InvalidOperationException("Unknown transcription provider");
@@ -136,8 +134,8 @@ public class TranscriptionJob : ITranscriptionJob
         }
     }
 
-    private async Task TranscribeWithWhisperNet(string toProcessFilePath, string outputFilePath, string outputObjectKey,
-        string fileKey, CancellationToken cancellationToken)
+    private async Task TranscribeWithWhisperNet(string toProcessFilePath, string outputFilePath, string fileKey,
+        CancellationToken cancellationToken)
     {
         if (_hostEnvironment.IsDevelopment())
         {
@@ -145,7 +143,7 @@ public class TranscriptionJob : ITranscriptionJob
         }
 
         await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
-            new TranscriptionProcessMessage(JobStatus.Processing, fileKey, outputObjectKey));
+            new TranscriptionProcessMessage(JobStatus.Processing, fileKey, null));
 
         await using (var stream = File.OpenRead(toProcessFilePath))
         await using (var writer = new StreamWriter(outputFilePath, append: false))
@@ -159,14 +157,14 @@ public class TranscriptionJob : ITranscriptionJob
                 }
 
                 await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
-                    new TranscriptionProcessMessage(JobStatus.Processing, fileKey, outputObjectKey));
+                    new TranscriptionProcessMessage(JobStatus.Processing, fileKey, null));
 
                 await writer.WriteLineAsync(line);
             }
         }
     }
 
-    private async Task TranscribeWithGroq(string outputFilePath, string fileKey, string outputObjectKey,
+    private async Task TranscribeWithGroq(string outputFilePath, string fileKey,
         CancellationToken cancellationToken)
     {
         if (_hostEnvironment.IsDevelopment())
@@ -175,7 +173,7 @@ public class TranscriptionJob : ITranscriptionJob
         }
 
         await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
-            new TranscriptionProcessMessage(JobStatus.Processing, fileKey, outputObjectKey));
+            new TranscriptionProcessMessage(JobStatus.Processing, fileKey, null));
 
         var fileUri = await _audioJobStorageService.CreateDownloadUrlAsync(fileKey, cancellationToken);
 
@@ -184,7 +182,7 @@ public class TranscriptionJob : ITranscriptionJob
                 cancellationToken);
 
         await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
-            new TranscriptionProcessMessage(JobStatus.Processing, fileKey, outputObjectKey));
+            new TranscriptionProcessMessage(JobStatus.Processing, fileKey, null));
 
         await File.WriteAllTextAsync(outputFilePath, transcriptionResult.Text, cancellationToken);
         if (_hostEnvironment.IsDevelopment())
@@ -194,7 +192,7 @@ public class TranscriptionJob : ITranscriptionJob
     }
 
     private async Task TranscribeWithCloudflare(string toProcessFilePath, string outputFilePath,
-        string fileKey, string outputObjectKey, CancellationToken cancellationToken)
+        string fileKey, CancellationToken cancellationToken)
     {
         if (_hostEnvironment.IsDevelopment())
         {
@@ -202,14 +200,14 @@ public class TranscriptionJob : ITranscriptionJob
         }
 
         await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
-            new TranscriptionProcessMessage(JobStatus.Processing, fileKey, outputObjectKey));
+            new TranscriptionProcessMessage(JobStatus.Processing, fileKey, null));
 
         var transcriptionResult =
             await _cloudFlareTranscriptionService.TranscribeAsync(new TranscriptionSource.FilePath(toProcessFilePath),
                 cancellationToken);
 
         await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
-            new TranscriptionProcessMessage(JobStatus.Processing, fileKey, outputObjectKey));
+            new TranscriptionProcessMessage(JobStatus.Processing, fileKey, null));
 
         await File.WriteAllTextAsync(outputFilePath, transcriptionResult.Text, cancellationToken);
         if (_hostEnvironment.IsDevelopment())
