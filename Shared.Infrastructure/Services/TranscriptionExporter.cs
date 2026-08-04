@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using Shared.Abstractions.Services;
 using Shared.Contracts.Enums;
+using Shared.Infrastructure.Helpers;
 
 namespace Shared.Infrastructure.Services;
 
@@ -161,28 +162,5 @@ public class TranscriptionExporter : ITranscriptionExporter
 
         return string.Create(CultureInfo.InvariantCulture,
             $"{(int)time.TotalHours:D2}:{time.Minutes:D2}:{time.Seconds:D2}{msSeparator}{time.Milliseconds:D3}");
-    }
-}
-
-public class TimeSpanToSecondsJsonConverter : JsonConverter<TimeSpan>
-{
-    public override TimeSpan Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        if (reader.TokenType == JsonTokenType.Number)
-        {
-            return TimeSpan.FromSeconds(reader.GetDouble());
-        }
-
-        if (reader.TokenType == JsonTokenType.String && TimeSpan.TryParse(reader.GetString(), out var parsed))
-        {
-            return parsed;
-        }
-
-        return TimeSpan.Zero;
-    }
-
-    public override void Write(Utf8JsonWriter writer, TimeSpan value, JsonSerializerOptions options)
-    {
-        writer.WriteNumberValue(Math.Round(value.TotalSeconds, 3));
     }
 }
