@@ -174,10 +174,10 @@ public class S3AudioJobStorageService : IAudioJobStorageService
         CancellationToken cancellationToken = default)
     {
         var fileExtension = Path.GetExtension(originalFileName);
-        if (!string.Equals(fileExtension, ".txt",
+        if (!string.Equals(fileExtension, ".json",
                 StringComparison.OrdinalIgnoreCase))
         {
-            throw new ArgumentException("Only .txt files can be uploaded.");
+            throw new ArgumentException("Only .json files can be uploaded.");
         }
 
         var objectKey = await _storagePathBuilder.ForProcessedFileAsync(userId, originalFileName);
