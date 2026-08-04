@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using Shared.Abstractions.Services;
 using Shared.Contracts.Enums;
+using Shared.Infrastructure.Helpers;
 
 namespace Shared.Infrastructure.Services;
 
@@ -14,7 +15,11 @@ public class StreamableTranscriptionExporter : IStreamableTranscriptionExporter
     {
         WriteIndented = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        Converters = { new JsonStringEnumConverter() },
+        Converters =
+        {
+            new JsonStringEnumConverter(),
+            new TimeSpanToSecondsJsonConverter()
+        },
         TypeInfoResolver = new DefaultJsonTypeInfoResolver
         {
             Modifiers = { IgnoreProviderModelId }
