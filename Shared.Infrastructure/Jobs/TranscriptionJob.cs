@@ -187,7 +187,7 @@ public class TranscriptionJob : ITranscriptionJob
         await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
             new TranscriptionProcessMessage(JobStatus.Processing, fileKey, null));
 
-        var fileUri = await _audioJobStorageService.CreateDownloadUrlAsync(fileKey, cancellationToken);
+        var (fileUri, _) = await _audioJobStorageService.CreateDownloadUrlAsync(fileKey, cancellationToken);
 
         var transcriptionResult =
             await _groqTranscriptionService.TranscribeAsync(new TranscriptionSource.Url(fileUri),
