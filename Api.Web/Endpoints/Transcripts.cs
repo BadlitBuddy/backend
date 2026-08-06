@@ -17,6 +17,8 @@ public class Transcripts : IEndpointGroup
         groupBuilder.MapGet(GetTranscriptDownloadUrl, "{id}/download-url");
     }
 
+    [EndpointSummary("Get Transcripts")]
+    [EndpointDescription("Retrieves a paginated list of transcripts")]
     public static async Task<Results<ProblemHttpResult, Ok<PaginatedList<TranscriptDto>>>> GetTranscripts(
         [FromQuery] int page, [FromQuery] int limit, ISender sender)
     {
@@ -36,6 +38,8 @@ public class Transcripts : IEndpointGroup
         return TypedResults.Ok(result.Value);
     }
 
+    [EndpointSummary("Get Transcript Download URL")]
+    [EndpointDescription("Gets a presigned URL to download a specific transcript by ID")]
     public static async Task<Results<ProblemHttpResult, Ok<TranscriptDownloadUrlDto>>> GetTranscriptDownloadUrl(
         string id,
         ISender sender)
