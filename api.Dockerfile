@@ -10,6 +10,7 @@ COPY Api.Domain/*.csproj Api.Domain/
 COPY Api.Infrastructure/*.csproj Api.Infrastructure/
 COPY Api.Web/*.csproj Api.Web/
 
+COPY Shared.Common/*.csproj Shared.Common/
 COPY Shared.Abstractions/*.csproj Shared.Abstractions/
 COPY Shared.Contracts/*.csproj Shared.Contracts/
 COPY Shared.Infrastructure/*.csproj Shared.Infrastructure/
@@ -23,6 +24,7 @@ COPY Api.Domain/. Api.Domain/
 COPY Api.Infrastructure/. Api.Infrastructure/
 COPY Api.Web/. Api.Web/
 
+COPY Shared.Common/. Shared.Common/
 COPY Shared.Abstractions/. Shared.Abstractions/
 COPY Shared.Contracts/. Shared.Contracts/
 COPY Shared.Infrastructure/. Shared.Infrastructure/

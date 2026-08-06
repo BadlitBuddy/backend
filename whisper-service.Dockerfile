@@ -22,6 +22,7 @@ COPY WhisperService.Infrastructure/*.csproj WhisperService.Infrastructure/
 COPY WhisperService.WorkerService/*.csproj WhisperService.WorkerService/
 
 COPY Api.Domain/*.csproj Api.Domain/
+COPY Shared.Common/*.csproj Shared.Common/
 COPY Shared.Abstractions/*.csproj Shared.Abstractions/
 COPY Shared.Contracts/*.csproj Shared.Contracts/
 COPY Shared.Infrastructure/*.csproj Shared.Infrastructure/
@@ -34,6 +35,7 @@ COPY WhisperService.Infrastructure/. WhisperService.Infrastructure/
 COPY WhisperService.WorkerService/. WhisperService.WorkerService/
 
 COPY Api.Domain/. Api.Domain/
+COPY Shared.Common/. Shared.Common/
 COPY Shared.Abstractions/. Shared.Abstractions/
 COPY Shared.Contracts/. Shared.Contracts/
 COPY Shared.Infrastructure/. Shared.Infrastructure/
