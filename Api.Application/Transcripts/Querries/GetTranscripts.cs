@@ -1,6 +1,5 @@
 using Api.Application.Common.Interfaces;
 using Api.Application.Transcripts.Dtos;
-using Shared.Abstractions.Storage;
 
 namespace Api.Application.Transcripts.Querries;
 
@@ -14,14 +13,11 @@ public class GetTranscriptsHandler : IRequestHandler<GetTranscriptsQuery, Result
 {
     private readonly IApplicationDbContext _dbContext;
     private readonly IUser _currentUser;
-    private readonly IStoragePathBuilder _storagePathBuilder;
 
-    public GetTranscriptsHandler(IApplicationDbContext dbContext, IUser currentUser,
-        IStoragePathBuilder storagePathBuilder)
+    public GetTranscriptsHandler(IApplicationDbContext dbContext, IUser currentUser)
     {
         _dbContext = dbContext;
         _currentUser = currentUser;
-        _storagePathBuilder = storagePathBuilder;
     }
 
     public async Task<Result<PaginatedList<TranscriptDto>>> Handle(GetTranscriptsQuery request,
@@ -38,7 +34,7 @@ public class GetTranscriptsHandler : IRequestHandler<GetTranscriptsQuery, Result
             .Where(tj => tj.UserId == Guid.Parse(_currentUser.Id!))
             .CountAsync(cancellationToken: cancellationToken);
 
-        var transcriptionJobsDto = transcriptionJobs.Select(tj => tj.ToDto(_storagePathBuilder)).ToList();
+        var transcriptionJobsDto = transcriptionJobs.Select(tj => tj.ToDto()).ToList();
 
         var list = new PaginatedList<TranscriptDto>(transcriptionJobsDto, totalTranscriptionJobs, request.Page,
             request.Limit);

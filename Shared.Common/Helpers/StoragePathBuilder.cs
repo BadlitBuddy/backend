@@ -1,9 +1,8 @@
 using NanoidDotNet;
-using Shared.Abstractions.Storage;
 
-namespace Shared.Infrastructure.Storage;
+namespace Shared.Common.Helpers;
 
-public class StoragePathBuilder : IStoragePathBuilder
+public static class StoragePathBuilder
 {
     private const int DefaultIdSize = 10;
 
@@ -11,15 +10,15 @@ public class StoragePathBuilder : IStoragePathBuilder
     /// Generates a unique key for unprocessed uploads.
     /// Example: {userId}/unprocessed/{shortId}-{fileName}
     /// </summary>
-    public async Task<string> ForUnprocessedFileAsync(string userId, string originalFileName)
+    public static string ForUnprocessedFileAsync(string userId, string originalFileName)
     {
-        var shortId = await Nanoid.GenerateAsync(size: DefaultIdSize);
+        var shortId = Nanoid.Generate(size: DefaultIdSize);
         var safeFileName = Path.GetFileName(originalFileName);
 
         return $"{userId}/unprocessed/{shortId}-{safeFileName}";
     }
 
-    public (string userId, string originalName) ExtractUnprocessedFileKeyParts(string objectKey)
+    public static (string userId, string originalName) ExtractUnprocessedFileKeyParts(string objectKey)
     {
         var parts = objectKey.Split('/');
         var userId = parts[0];
@@ -32,15 +31,15 @@ public class StoragePathBuilder : IStoragePathBuilder
     /// Generates a key for processed uploads.
     /// Example: {userId}/processed/{shortId}-{fileName}
     /// </summary>
-    public async Task<string> ForProcessedFileAsync(string userId, string originalFileName)
+    public static string ForProcessedFileAsync(string userId, string originalFileName)
     {
-        var shortId = await Nanoid.GenerateAsync(size: DefaultIdSize);
+        var shortId = Nanoid.Generate(size: DefaultIdSize);
         var safeFileName = Path.GetFileName(originalFileName);
 
         return $"{userId}/processed/{shortId}-{safeFileName}";
     }
 
-    public (string userId, string originalName) ExtractProcessedFileKeyParts(string objectKey)
+    public static (string userId, string originalName) ExtractProcessedFileKeyParts(string objectKey)
     {
         var parts = objectKey.Split('/');
         var userId = parts[0];

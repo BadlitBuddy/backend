@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using Shared.Abstractions.Services;
 using Shared.Contracts.Enums;
+using Shared.Infrastructure.Helpers;
 
 namespace Shared.Infrastructure.Services;
 
@@ -14,7 +15,11 @@ public class TranscriptionExporter : ITranscriptionExporter
     {
         WriteIndented = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        Converters = { new JsonStringEnumConverter() },
+        Converters =
+        {
+            new JsonStringEnumConverter(),
+            new TimeSpanToSecondsJsonConverter()
+        },
         TypeInfoResolver = new DefaultJsonTypeInfoResolver
         {
             Modifiers = { IgnoreProviderModelId }
@@ -137,7 +142,6 @@ public class TranscriptionExporter : ITranscriptionExporter
 
     public string ToJson(TranscriptionResult result)
     {
-        ArgumentNullException.ThrowIfNull(result);
         return JsonSerializer.Serialize(result, JsonOptions);
     }
 

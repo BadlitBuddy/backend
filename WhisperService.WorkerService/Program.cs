@@ -4,7 +4,6 @@ using Infrastructure.Services;
 using Microsoft.Extensions.Options;
 using Shared.Abstractions.Jobs;
 using Shared.Abstractions.Services;
-using Shared.Contracts.Dtos;
 using Shared.Contracts.Enums;
 using Shared.Infrastructure;
 using Shared.Infrastructure.Configuration;
@@ -35,7 +34,6 @@ if (healthOptions?.EnableHealthCheck == true)
 }
 
 builder.Services
-    .AddSharedServices()
     .AddConnectionStringsConfiguration(builder.Configuration)
     .AddS3Configuration(builder.Configuration)
     .AddS3Services()
