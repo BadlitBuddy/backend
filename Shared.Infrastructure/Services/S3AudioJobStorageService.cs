@@ -229,7 +229,7 @@ public class S3AudioJobStorageService : IAudioJobStorageService
         }
     }
 
-    public async Task<(Uri, DateTime expiry)> CreateDownloadUrlAsync(string fileKey,
+    public async Task<(Uri uri, DateTime expiry)> CreateDownloadUrlAsync(string fileKey,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
