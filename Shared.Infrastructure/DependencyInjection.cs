@@ -9,24 +9,16 @@ using Microsoft.Extensions.Options;
 using Shared.Abstractions.Jobs;
 using Shared.Abstractions.Repositories;
 using Shared.Abstractions.Services;
-using Shared.Abstractions.Storage;
 using Shared.Infrastructure.Data;
 using Shared.Infrastructure.Jobs;
 using Shared.Infrastructure.Repositories;
 using Shared.Infrastructure.Services;
-using Shared.Infrastructure.Storage;
 using StackExchange.Redis;
 
 namespace Shared.Infrastructure;
 
 public static class DependencyInjection
 {   
-    public static IServiceCollection AddSharedServices(this IServiceCollection services)
-    {
-        services.AddSingleton<IStoragePathBuilder, StoragePathBuilder>();
-        return services;
-    }
-    
     public static IServiceCollection AddConnectionStringsConfiguration(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<ConnectionStrings>(
