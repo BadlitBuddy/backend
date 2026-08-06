@@ -1,25 +1,25 @@
 using Api.Domain.Entities;
-using Shared.Abstractions.Storage;
+using Shared.Common.Helpers;
 
 namespace Api.Application.Transcripts.Dtos;
 
 public static class TranscriptMappingExtensions
 {
-    public static TranscriptDto ToDto(
-        this TranscriptionJob entity,
-        IStoragePathBuilder storagePathBuilder)
+    public static TranscriptDto ToDto(this TranscriptionJob entity)
     {
         return new TranscriptDto
         {
-            UnprocessedObjectKey = entity.UnprocessedObjectKey,
-            OriginalUnprocessedFileName = storagePathBuilder.ExtractUnprocessedFileKeyParts(entity.UnprocessedObjectKey)
-                .originalName,
-            ProcessedObjectKey = entity.ProcessedObjectKey,
-            OriginalProcessedFileName = !string.IsNullOrWhiteSpace(entity.ProcessedObjectKey)
-                ? storagePathBuilder.ExtractProcessedFileKeyParts(entity.ProcessedObjectKey).originalName
-                : null,
+            Id = entity.PublicId,
+            FileName = StoragePathBuilder.ExtractUnprocessedFileKeyParts(entity.UnprocessedObjectKey).originalName,
             JobStatus = entity.JobStatus,
             CreatedAt = entity.Created
         };
+    }
+
+    public static TranscriptDownloadUrlDto ToDownloadUrlDto(this TranscriptionJob entity, string downloadUrl,
+        DateTime expiry)
+    {
+        var fileName = StoragePathBuilder.ExtractUnprocessedFileKeyParts(entity.UnprocessedObjectKey).originalName;
+        return new TranscriptDownloadUrlDto(fileName, downloadUrl, expiry);
     }
 }

@@ -20,7 +20,6 @@ public static class DependencyInjection
 {
     public static void AddInfrastructureServices(this IHostApplicationBuilder builder)
     {
-        builder.Services.AddSharedServices();
         builder.Services.AddScoped<ISaveChangesInterceptor, AuditingAndSoftDeleteInterceptor>();
         builder.Services.AddScoped<ISaveChangesInterceptor, DispatchDomainEventsInterceptor>();
 
