@@ -9,13 +9,8 @@ public static class TranscriptMappingExtensions
     {
         return new TranscriptDto
         {
-            UnprocessedObjectKey = entity.UnprocessedObjectKey,
-            OriginalUnprocessedFileName = StoragePathBuilder.ExtractUnprocessedFileKeyParts(entity.UnprocessedObjectKey)
-                .originalName,
-            ProcessedObjectKey = entity.ProcessedObjectKey,
-            OriginalProcessedFileName = !string.IsNullOrWhiteSpace(entity.ProcessedObjectKey)
-                ? StoragePathBuilder.ExtractProcessedFileKeyParts(entity.ProcessedObjectKey).originalName
-                : null,
+            Id = entity.PublicId,
+            FileName = StoragePathBuilder.ExtractUnprocessedFileKeyParts(entity.UnprocessedObjectKey).originalName,
             JobStatus = entity.JobStatus,
             CreatedAt = entity.Created
         };
