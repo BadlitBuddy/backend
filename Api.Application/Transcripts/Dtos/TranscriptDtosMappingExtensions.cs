@@ -15,4 +15,11 @@ public static class TranscriptMappingExtensions
             CreatedAt = entity.Created
         };
     }
+
+    public static TranscriptDownloadUrlDto ToDownloadUrlDto(this TranscriptionJob entity, string downloadUrl,
+        DateTime expiry)
+    {
+        var fileName = StoragePathBuilder.ExtractUnprocessedFileKeyParts(entity.UnprocessedObjectKey).originalName;
+        return new TranscriptDownloadUrlDto(fileName, downloadUrl, expiry);
+    }
 }
