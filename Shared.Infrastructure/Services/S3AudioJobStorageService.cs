@@ -2,6 +2,7 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NAudio.Wave;
 using Shared.Abstractions.Services;
 using Shared.Common.Helpers;
 
@@ -121,6 +122,56 @@ public class S3AudioJobStorageService : IAudioJobStorageService
         {
             _logger.LogError("Failed to get {FileKey} while checking if file is whisper compatible", fileKey);
             return false;
+        }
+    }
+
+    public async Task<TimeSpan?> GetWavDurationAsync(
+        string fileKey,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var request = new GetObjectRequest
+            {
+                BucketName = _options.Value.BucketName,
+                Key = fileKey
+            };
+
+            using var response = await _s3Client.GetObjectAsync(request, cancellationToken);
+            await using var reader = new WaveFileReader(response.ResponseStream);
+
+            return reader.TotalTime;
+        }
+        catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            _logger.LogError(
+                "Failed to get {FileKey} while reading WAV duration.",
+                fileKey);
+
+            return null;
+        }
+        catch (InvalidDataException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "{FileKey} is not a valid WAV file.",
+                fileKey);
+
+            return null;
+        }
+    }
+
+    public TimeSpan? GetWavDuration(FileStream streamInput)
+    {
+        try
+        {
+            using var reader = new WaveFileReader(streamInput);
+            return reader.TotalTime;
+        }
+        catch (InvalidDataException ex)
+        {
+            _logger.LogWarning(ex, "File is not a valid WAV format.");
+            return null;
         }
     }
 
