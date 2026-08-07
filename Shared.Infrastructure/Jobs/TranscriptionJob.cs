@@ -76,11 +76,12 @@ public class TranscriptionJob : ITranscriptionJob
         {
             _logger.LogInformation("Starting Whisper transcription for: {FileKey}", fileKey);
 
-            await using (var s3Stream = await _audioJobStorageService.DownloadAudioAsync(fileKey, cancellationToken))
-            await using (var fileStream = File.Create(toProcessFilePath))
-            {
-                await s3Stream.CopyToAsync(fileStream, cancellationToken);
-            }
+            await using var s3Stream = await _audioJobStorageService.DownloadAudioAsync(fileKey, cancellationToken);
+            await using var fileStream = File.Create(toProcessFilePath);
+            await s3Stream.CopyToAsync(fileStream, cancellationToken);
+            fileStream.Position = 0;
+            var fileDuration = _audioJobStorageService.GetWavDuration(fileStream) ?? TimeSpan.Zero;
+            await _transcriptionJobRepository.UpdateDurationAsync(fileKey, fileDuration, new Guid(userId));
 
             await _transcriptionJobRepository.UpdateStatusAsync(fileKey, null,
                 TranscriptionJobStatus.Processing, new Guid(userId));
