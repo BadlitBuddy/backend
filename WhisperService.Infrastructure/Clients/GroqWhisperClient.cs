@@ -35,7 +35,7 @@ public class GroqWhisperClient
         content.Add(new StringContent(Model), "model");
         content.Add(new StringContent("0"), "temperature");
         content.Add(new StringContent("verbose_json"), "response_format");
-        content.Add(new StringContent("word"), "timestamp_granularities[]");
+        content.Add(new StringContent("segment"), "timestamp_granularities[]");
     }
 
     private async Task<GroqVerboseResponse> SendAsync(
