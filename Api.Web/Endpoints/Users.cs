@@ -25,7 +25,7 @@ public class Users : IEndpointGroup
         groupBuilder.MapGet("login", Login);
         groupBuilder.MapGet("auth/google-response-login", LoginGoogleCallback);
         groupBuilder.MapGet("me", GetUserDetails);
-        groupBuilder.MapPost("refresh", Refresh).RequireAuthorization();
+        groupBuilder.MapPost("refresh", Refresh);
         groupBuilder.MapPost("logout", Logout).RequireAuthorization();
     }
 
@@ -275,14 +275,13 @@ public class Users : IEndpointGroup
     {
         try
         {
-            var userId = currentUserService.Id;
             var refreshToken = currentUserService.RefreshToken;
-            if (string.IsNullOrWhiteSpace(userId))
-                return UnauthorizedProblem();
             if (string.IsNullOrWhiteSpace(refreshToken))
+            {
                 return UnauthorizedProblem();
+            }
 
-            var response = await tokenService.RefreshTokenAsync(refreshToken, new Guid(userId));
+            var response = await tokenService.RefreshTokensAsync(refreshToken);
 
             context.Response.Cookies.Append("AuthToken", response.AccessToken, new CookieOptions
             {
@@ -305,6 +304,7 @@ public class Users : IEndpointGroup
         }
         catch (UnauthorizedAccessException)
         {
+            Console.WriteLine("Unexpected problem");
             return UnauthorizedProblem();
         }
     }

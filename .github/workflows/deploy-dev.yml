@@ -75,8 +75,8 @@ jobs:
             --cpu-throttling \
             --min-instances=0 \
             --max-instances=1 \
-            --cpu=1 \
-            --memory=1024Mi \
+            --cpu=2 \
+            --memory=2048Mi \
             --concurrency=50 \
             --startup-probe=httpGet.path=/live,initialDelaySeconds=5,periodSeconds=10,failureThreshold=3 \
             --liveness-probe=httpGet.path=/live,periodSeconds=20
