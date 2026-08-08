@@ -12,7 +12,8 @@ public static class TranscriptMappingExtensions
             Id = entity.PublicId,
             FileName = StoragePathBuilder.ExtractUnprocessedFileKeyParts(entity.UnprocessedObjectKey).originalName,
             JobStatus = entity.JobStatus,
-            CreatedAt = entity.Created
+            CreatedAt = entity.Created,
+            Duration = entity.Duration
         };
     }
 
