@@ -1,5 +1,7 @@
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Infrastructure.Dtos.TranscriptionProviderResults;
+using Infrastructure.Dtos.TranscriptionProviderResults.CloudFlare;
 using Infrastructure.Helpers;
 using WhisperService.Core.Dtos;
 
@@ -8,6 +10,7 @@ namespace Infrastructure.Clients;
 public class CloudFlareWhisperClient
 {
     private const string WhisperLargeV3TurboModelEndpoint = "ai/run/@cf/openai/whisper-large-v3-turbo";
+    private const string WhisperTinyEnModelEndpoint = "ai/run/@cf/openai/whisper-tiny-en";
     private readonly HttpClient _httpClient;
 
     public CloudFlareWhisperClient(HttpClient httpClient)
@@ -30,6 +33,20 @@ public class CloudFlareWhisperClient
         response.EnsureSuccessStatusCode();
 
         return await response.Content.ReadFromJsonAsync<CloudflareResponse<CfWhisperV3TurboResponse>>(
+            cancellationToken: cancellationToken);
+    }
+
+    public async Task<CloudflareResponse<CfWhisperTinyEnResponse>?> TranscribeWithWhisperTinyEnAsync(
+        string filePath,
+        CancellationToken cancellationToken = default)
+    {
+        var fileBytes = await File.ReadAllBytesAsync(filePath, cancellationToken);
+        using var content = new ByteArrayContent(fileBytes);
+        content.Headers.ContentType = new MediaTypeHeaderValue("audio/wav");
+
+        using var response = await _httpClient.PostAsync(WhisperTinyEnModelEndpoint, content, cancellationToken);
+
+        return await response.Content.ReadFromJsonAsync<CloudflareResponse<CfWhisperTinyEnResponse>>(
             cancellationToken: cancellationToken);
     }
 }
