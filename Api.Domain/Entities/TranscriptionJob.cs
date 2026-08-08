@@ -9,6 +9,7 @@ public class TranscriptionJob : BaseAuditableEntity<int>
     public required string UnprocessedObjectKey { get; set; }
     public string? ProcessedObjectKey { get; set; }
     public TranscriptionJobStatus JobStatus { get; private set; }
+    public TimeSpan Duration { get; set; }
 
     public void MarkAsUploaded()
     {
@@ -29,6 +30,7 @@ public class TranscriptionJob : BaseAuditableEntity<int>
         }
 
         JobStatus = TranscriptionJobStatus.Processing;
+        AddDomainEvent(new TranscriptionJobProcessingEvent(this));
     }
 
     public void MarkAsCompleted()

@@ -7,6 +7,13 @@ public interface IAudioJobStorageService
     Task<bool> IsWhisperCompatibleWavAsync(string fileKey, long? maxSizeBytes = 100L * 1024 * 1024,
         CancellationToken cancellationToken = default);
 
+    Task<TimeSpan?> GetWavDurationAsync(
+        string fileKey,
+        CancellationToken cancellationToken = default);
+
+    TimeSpan? GetWavDuration(
+        FileStream streamInput);
+
     Task<UploadUrlDto> CreateUploadUrlAsync(string userId, string originalFileName);
     Task<IEnumerable<AudioJobDto>> GetPendingJobsAsync(int batchSize, CancellationToken cancellationToken);
 
@@ -16,5 +23,6 @@ public interface IAudioJobStorageService
     Task<Stream> DownloadAudioAsync(string fileKey, CancellationToken cancellationToken);
     Task<bool> DeleteAudioAsync(string fileKey, CancellationToken cancellationToken);
 
-    Task<(Uri uri, DateTime expiry)> CreateDownloadUrlAsync(string fileKey, CancellationToken cancellationToken = default);
+    Task<(Uri uri, DateTime expiry)> CreateDownloadUrlAsync(string fileKey,
+        CancellationToken cancellationToken = default);
 }
