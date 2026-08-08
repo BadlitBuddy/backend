@@ -44,11 +44,11 @@ public class TokenService : ITokenService
         );
     }
 
-    public async Task<GeneratedTokenDto> RefreshTokenAsync(string refreshToken, Guid userId)
+    public async Task<GeneratedTokenDto> RefreshTokensAsync(string refreshToken)
     {
         var existingRefreshToken = await _dbContext.RefreshTokens
             .Include(t => t.User)
-            .SingleOrDefaultAsync(t => t.Token == refreshToken && t.UserId == userId);
+            .SingleOrDefaultAsync(t => t.Token == refreshToken);
 
         if (existingRefreshToken == null)
         {
