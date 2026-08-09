@@ -26,6 +26,7 @@ public class UpdateFileStatusHandler : IRequestHandler<UpdateFileStatusCommand, 
         CancellationToken cancellationToken)
     {
         var currentUserId = new Guid(_currentUserService.Id!);
+        // todo, use transcription job public id
         var transcriptionJob =
             await _dbContext.TranscriptionJobs.SingleOrDefaultAsync(tb =>
                 tb.UnprocessedObjectKey == request.UnprocessedObjectKey &&
