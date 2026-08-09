@@ -6,6 +6,7 @@ public static class StoragePathBuilder
 {
     private const int DefaultIdSize = 10;
 
+    // todo: need to fix this, userid is nullable
     /// <summary>
     /// Generates a unique key for unprocessed uploads.
     /// Example: {userId}/unprocessed/{shortId}-{fileName}
