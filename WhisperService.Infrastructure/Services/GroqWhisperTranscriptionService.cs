@@ -15,6 +15,7 @@ public class GroqWhisperTranscriptionService : ITranscriptionService
     }
 
     public async Task<TranscriptionResult> TranscribeAsync(TranscriptionSource source,
+        TranscriptionModel transcriptionModel,
         CancellationToken cancellationToken = default)
     {
         return source switch
