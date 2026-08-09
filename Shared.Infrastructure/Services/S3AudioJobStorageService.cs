@@ -152,11 +152,16 @@ public class S3AudioJobStorageService : IAudioJobStorageService
             var request = new GetObjectRequest
             {
                 BucketName = _options.Value.BucketName,
-                Key = fileKey
+                Key = fileKey,
+                ByteRange = new ByteRange(0, 65535)
             };
 
             using var response = await _s3Client.GetObjectAsync(request, cancellationToken);
-            await using var reader = new WaveFileReader(response.ResponseStream);
+            using var ms = new MemoryStream(65536);
+            await response.ResponseStream.CopyToAsync(ms, cancellationToken);
+            ms.Position = 0;
+
+            using var reader = new WaveFileReader(ms);
 
             return reader.TotalTime;
         }
