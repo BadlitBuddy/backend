@@ -37,16 +37,19 @@ public class CloudFlareWhisperClient
     }
 
     public async Task<CloudflareResponse<CfWhisperTinyEnResponse>?> TranscribeWithWhisperTinyEnAsync(
-        string filePath,
+        Stream audioStream,
         CancellationToken cancellationToken = default)
     {
-        var fileBytes = await File.ReadAllBytesAsync(filePath, cancellationToken);
-        using var content = new ByteArrayContent(fileBytes);
+        using var content = new StreamContent(audioStream, 64 * 1024);
         content.Headers.ContentType = new MediaTypeHeaderValue("audio/wav");
 
-        using var response = await _httpClient.PostAsync(WhisperTinyEnModelEndpoint, content, cancellationToken);
+        using var response = await _httpClient.PostAsync(
+            WhisperTinyEnModelEndpoint,
+            content,
+            cancellationToken);
 
-        return await response.Content.ReadFromJsonAsync<CloudflareResponse<CfWhisperTinyEnResponse>>(
+        return await response.Content.ReadFromJsonAsync<
+            CloudflareResponse<CfWhisperTinyEnResponse>>(
             cancellationToken: cancellationToken);
     }
 }
