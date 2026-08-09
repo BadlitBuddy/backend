@@ -1,7 +1,6 @@
 using Api.Application.Common.Interfaces;
 using Api.Application.Files.Commands.UpdateFileStatus;
 using Api.Application.Files.Queries.GetUploadPresignedUrl;
-using Api.Domain.Enums;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +14,7 @@ public record UpdateStatusRequest(string? ProcessedObjectKey, TranscriptionJobSt
 
 public record FileEventRequest(string[] UnprocessedObjectKeys);
 
+// TODO: This is not  RESTful consolidate under Transcripts
 public class Files : IEndpointGroup
 {
     public static void Map(RouteGroupBuilder groupBuilder)
