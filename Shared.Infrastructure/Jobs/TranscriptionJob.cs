@@ -1,3 +1,4 @@
+using Hangfire;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -5,8 +6,10 @@ using Microsoft.Extensions.Options;
 using Shared.Abstractions.Jobs;
 using Shared.Abstractions.Repositories;
 using Shared.Abstractions.Services;
+using Shared.Common.Helpers;
 using Shared.Contracts.DtoMappers;
 using Shared.Contracts.Enums;
+using Shared.Infrastructure.Constants;
 using TranscriptionJobStatus = Api.Domain.Enums.TranscriptionJobStatus;
 
 namespace Shared.Infrastructure.Jobs;
@@ -140,6 +143,109 @@ public class TranscriptionJob : ITranscriptionJob
         }
     }
 
+    [Queue(HangfireQueueConstants.WhisperTinyEn)]
+    public async Task TranscribeFileWithWhisperTinyEnAsync(string fileKey, CancellationToken cancellationToken)
+    {
+        var isValidFile =
+            await _audioJobStorageService.IsWhisperCompatibleWavAsync(fileKey, cancellationToken: cancellationToken);
+        if (!isValidFile)
+        {
+            _logger.LogWarning("File with key: {FileKey} is invalid", fileKey);
+            return;
+        }
+
+        string toProcessDir = Path.Combine(AppContext.BaseDirectory, "MediaFiles", "ToProcess");
+        string processedDir = Path.Combine(AppContext.BaseDirectory, "MediaFiles", "Processed");
+        Directory.CreateDirectory(toProcessDir);
+        Directory.CreateDirectory(processedDir);
+
+        string toProcessFilePath = Path.Combine(toProcessDir, Path.GetFileName(fileKey));
+
+        string outputFileName = Path.ChangeExtension(Path.GetFileName(fileKey), ".json");
+        string outputFilePath = Path.Combine(processedDir, outputFileName);
+
+        var (userId, originalFileName) = StoragePathBuilder.ExtractUnprocessedFileKeyParts(fileKey);
+
+        string? outputObjectKey = null;
+        try
+        {
+            _logger.LogInformation("Starting Whisper transcription for: {FileKey}", fileKey);
+
+            await using var s3Stream = await _audioJobStorageService.DownloadAudioAsync(fileKey, cancellationToken);
+            await using var fileStream = File.Create(toProcessFilePath);
+            await s3Stream.CopyToAsync(fileStream, cancellationToken);
+
+            fileStream.Position = 0;
+            var fileDuration = _audioJobStorageService.GetWavDuration(fileStream) ?? TimeSpan.Zero;
+            await _transcriptionJobRepository.UpdateDurationAsync(fileKey, fileDuration, new Guid(userId));
+
+            await _transcriptionJobRepository.UpdateStatusAsync(fileKey, null,
+                TranscriptionJobStatus.Processing, new Guid(userId));
+
+            if (_hostEnvironment.IsDevelopment())
+            {
+                _logger.LogInformation("Transcribing with CLoudflare Whisper Tiny-en with key: {FileKey}", fileKey);
+            }
+
+            await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
+                new TranscriptionProcessMessage(JobStatus.Processing, fileKey, null));
+
+            var transcriptionResult =
+                await _cloudFlareTranscriptionService.TranscribeAsync(
+                    new TranscriptionSource.FilePath(new FileInfo(toProcessFilePath)),
+                    TranscriptionModel.WhisperTinyEn,
+                    cancellationToken);
+
+            await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
+                new TranscriptionProcessMessage(JobStatus.Processing, fileKey, null));
+
+            await using var outPutFileStream = File.Create(outputFilePath);
+            await _streamableTranscriptionExporter.ToJsonAsync(transcriptionResult, outPutFileStream,
+                cancellationToken);
+
+            if (_hostEnvironment.IsDevelopment())
+            {
+                _logger.LogInformation("Transcribed text: {Text}", transcriptionResult.Text);
+            }
+
+            await using (var uploadStream = new FileStream(
+                             outputFilePath,
+                             FileMode.Open,
+                             FileAccess.Read,
+                             FileShare.Read,
+                             bufferSize: 4096,
+                             useAsync: true))
+            {
+                var originalFileNameJson = Path.ChangeExtension(originalFileName, ".json");
+                var uploadResult = await _audioJobStorageService.UploadTranscriptionAsync(
+                    userId,
+                    originalFileNameJson,
+                    uploadStream,
+                    cancellationToken);
+
+                outputObjectKey = uploadResult;
+            }
+
+            await _transcriptionJobRepository.UpdateStatusAsync(fileKey, outputObjectKey,
+                TranscriptionJobStatus.Completed, new Guid(userId));
+            await _audioJobStorageService.DeleteAudioAsync(fileKey, cancellationToken);
+
+            _logger.LogInformation("Finished transcription and cleanup for: {FileKey}", fileKey);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to process {FileKey}", fileKey);
+        }
+        finally
+        {
+            if (File.Exists(toProcessFilePath)) File.Delete(toProcessFilePath);
+            if (File.Exists(outputFilePath)) File.Delete(outputFilePath);
+
+            await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
+                new TranscriptionProcessMessage(JobStatus.Finished, fileKey, outputObjectKey));
+        }
+    }
+
     private async Task TranscribeWithWhisperNet(string toProcessFilePath, string outputFilePath, string fileKey,
         CancellationToken cancellationToken)
     {
@@ -192,6 +298,7 @@ public class TranscriptionJob : ITranscriptionJob
 
         var transcriptionResult =
             await _groqTranscriptionService.TranscribeAsync(new TranscriptionSource.Url(fileUri),
+                TranscriptionModel.WhisperV3LargeTurbo,
                 cancellationToken);
 
         await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
@@ -218,7 +325,9 @@ public class TranscriptionJob : ITranscriptionJob
             new TranscriptionProcessMessage(JobStatus.Processing, fileKey, null));
 
         var transcriptionResult =
-            await _cloudFlareTranscriptionService.TranscribeAsync(new TranscriptionSource.FilePath(toProcessFilePath),
+            await _cloudFlareTranscriptionService.TranscribeAsync(
+                new TranscriptionSource.FilePath(new FileInfo(toProcessFilePath)),
+                TranscriptionModel.WhisperV3LargeTurbo,
                 cancellationToken);
 
         await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,

@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using Infrastructure;
 using Infrastructure.Clients;
 using Infrastructure.Services;
 using Microsoft.Extensions.Options;
@@ -38,7 +39,7 @@ builder.Services
     .AddS3Configuration(builder.Configuration)
     .AddS3Services()
     .AddHangFireStorage()
-    .AddHangFireServerWorker()
+    .AddHangFireServerWorker(builder.Configuration)
     .AddRedisPublisherService()
     .AddDapperContext()
     .AddDataRepositories();
