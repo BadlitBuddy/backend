@@ -4,6 +4,8 @@ public interface IAudioJobStorageService
 {
     Task<bool> IsStorageAvailableAsync(CancellationToken cancellationToken);
 
+    Task<bool> DoesObjectExistAsync(string fileKey, CancellationToken cancellationToken = default);
+
     Task<bool> IsWhisperCompatibleWavAsync(string fileKey, long? maxSizeBytes = 100L * 1024 * 1024,
         CancellationToken cancellationToken = default);
 
