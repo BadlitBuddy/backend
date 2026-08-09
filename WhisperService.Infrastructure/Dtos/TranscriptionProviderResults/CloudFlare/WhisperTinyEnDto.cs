@@ -1,4 +1,6 @@
 using System.Text.Json.Serialization;
+using Shared.Contracts.Dtos;
+using Shared.Contracts.Enums;
 
 namespace Infrastructure.Dtos.TranscriptionProviderResults.CloudFlare;
 
@@ -41,7 +43,7 @@ public class CfWhisperTinyEnTranscriptionSegment
     [JsonPropertyName("compression_ratio")]
     public double? CompressionRatio { get; set; }
 
-    [JsonPropertyName("no_speech_prob")] public double? NoSpeechProb { get; set; }
+    [JsonPropertyName("no_speech_prob")] public float? NoSpeechProb { get; set; }
 
     [JsonPropertyName("words")] public List<CfWhisperTinyEnTranscriptionWord> Words { get; set; } = new();
 
@@ -66,4 +68,39 @@ public class CfWhisperTinyEnTranscriptionUsage
 public class CfWhisperTinyEnPromptTokensDetails
 {
     [JsonPropertyName("cached_tokens")] public int CachedTokens { get; set; }
+}
+
+public static class CfWhisperTinyEnResponseMapper
+{
+    public static TranscriptionResult ToResult(CfWhisperTinyEnResponse r)
+    {
+        return new TranscriptionResult
+        {
+            Text = r.Text,
+            WordCount = r.WordCount,
+            Vtt = r.Vtt,
+            Words = r.Words.Select(ToWord).ToArray(),
+            Segments = r.Segments.Select(ToSegment).ToArray(),
+            ProviderModelId = TranscriptionProvider.Cloudflare
+        };
+    }
+
+    private static TranscriptionSegment ToSegment(CfWhisperTinyEnTranscriptionSegment s) => new()
+    {
+        Text = s.Text,
+        Start = TimeSpan.FromSeconds(s.Start),
+        End = TimeSpan.FromSeconds(s.End),
+        NoSpeechProbability = s.NoSpeechProb,
+        AverageLogProbability = s.AvgLogprob,
+        CompressionRatio = s.CompressionRatio,
+        Temperature = s.Temperature,
+        Words = s.Words.Select(ToWord).ToArray()
+    };
+
+    private static TranscriptionWord ToWord(CfWhisperTinyEnTranscriptionWord w) => new()
+    {
+        Word = w.Word,
+        Start = TimeSpan.FromSeconds(w.Start),
+        End = TimeSpan.FromSeconds(w.End)
+    };
 }
