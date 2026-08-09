@@ -7,4 +7,5 @@ public interface IUser
     string? PublicId { get; }
     string? Email { get; }
     List<string>? Roles { get; }
+    bool IsAuthenticated { get; }
 }
