@@ -18,4 +18,11 @@ public class HangfireTranscriptionJobScheduler : ITranscriptionJobScheduler
             jobService.TranscribeFileAsync(objectFileKey, cancellationToken)
         );
     }
+
+    public string EnqueueTranscriptionJobWithWhisperTinyEn(string objectFileKey, CancellationToken cancellationToken)
+    {
+        return _backgroundJobClient.Enqueue<ITranscriptionJob>(jobService =>
+            jobService.TranscribeFileWithWhisperTinyEnAsync(objectFileKey, cancellationToken)
+        );
+    }
 }
