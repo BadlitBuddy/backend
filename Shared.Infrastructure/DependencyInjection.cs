@@ -89,16 +89,6 @@ public static class DependencyInjection
         services.AddSingleton<ITranscriptionJobScheduler, HangfireTranscriptionJobScheduler>();
         return services;
     }
-    
-    public static IServiceCollection AddHangFireServerWorker(this IServiceCollection services, int workerCount = 1)
-    {
-        services.AddHangfireServer(options =>
-        {
-            options.WorkerCount = workerCount;
-        });
-        
-        return services;
-    }
 
     public static WebApplication UseHangFireDashboard(this WebApplication app)
     {

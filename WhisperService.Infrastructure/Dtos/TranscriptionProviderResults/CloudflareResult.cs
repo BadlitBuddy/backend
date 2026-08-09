@@ -50,7 +50,7 @@ public sealed record CfWhisperV3TurboWord
     [JsonPropertyName("end")] public double End { get; init; }
 }
 
-public static class CloudflareMapper
+public static class CfWhisperV3TurboResponseMapper
 {
     public static TranscriptionResult ToResult(CfWhisperV3TurboResponse r)
     {
