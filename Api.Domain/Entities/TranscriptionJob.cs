@@ -43,4 +43,14 @@ public class TranscriptionJob : BaseAuditableEntity<int>
 
         JobStatus = TranscriptionJobStatus.Completed;
     }
+
+    public void MarkAsCanceled()
+    {
+        JobStatus = TranscriptionJobStatus.Canceled;
+    }
+
+    public void MarkAsFailed()
+    {
+        JobStatus = TranscriptionJobStatus.Failed;
+    }
 }
