@@ -17,20 +17,11 @@ public class TranscriptionJobProcessing : INotificationHandler<TranscriptionJobP
 
     public async Task Handle(TranscriptionJobProcessingEvent notification, CancellationToken cancellationToken)
     {
-        var transcriptionJob =
-            await _dbContext.TranscriptionJobs.SingleOrDefaultAsync(tb =>
-                tb.PublicId == notification.TranscriptionJob.PublicId, cancellationToken: cancellationToken);
-
-        if (transcriptionJob == null)
-        {
-            throw new NotFoundException("Transcription", "Transcription job not found");
-        }
-
         var fileDuration =
             await _audioJobStorageService.GetWavDurationAsync(notification.TranscriptionJob.UnprocessedObjectKey,
                 cancellationToken) ?? TimeSpan.Zero;
 
-        transcriptionJob.Duration = fileDuration;
+        notification.TranscriptionJob.Duration = fileDuration;
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }
