@@ -70,21 +70,18 @@ public class TranscriptionJob : ITranscriptionJob
         string outputFileName = Path.ChangeExtension(Path.GetFileName(fileKey), ".json");
         string outputFilePath = Path.Combine(processedDir, outputFileName);
 
-        var parts = fileKey.Split('/');
-        var userId = parts[0];
-        var originalFileName = Path.ChangeExtension(parts[^1].Substring(11), ".txt");
+        var (userId, originalFileName) = StoragePathBuilder.ExtractUnprocessedFileKeyParts(fileKey);
 
         string? outputObjectKey = null;
         try
         {
             _logger.LogInformation("Starting Whisper transcription for: {FileKey}", fileKey);
 
-            await using var s3Stream = await _audioJobStorageService.DownloadAudioAsync(fileKey, cancellationToken);
-            await using var fileStream = File.Create(toProcessFilePath);
-            await s3Stream.CopyToAsync(fileStream, cancellationToken);
-            fileStream.Position = 0;
-            var fileDuration = _audioJobStorageService.GetWavDuration(fileStream) ?? TimeSpan.Zero;
-            await _transcriptionJobRepository.UpdateDurationAsync(fileKey, fileDuration, new Guid(userId));
+            {
+                await using var s3Stream = await _audioJobStorageService.DownloadAudioAsync(fileKey, cancellationToken);
+                await using var fileStream = File.Create(toProcessFilePath);
+                await s3Stream.CopyToAsync(fileStream, cancellationToken);
+            }
 
             await _transcriptionJobRepository.UpdateStatusAsync(fileKey, null,
                 TranscriptionJobStatus.Processing, new Guid(userId));
@@ -171,13 +168,11 @@ public class TranscriptionJob : ITranscriptionJob
         {
             _logger.LogInformation("Starting Whisper transcription for: {FileKey}", fileKey);
 
-            await using var s3Stream = await _audioJobStorageService.DownloadAudioAsync(fileKey, cancellationToken);
-            await using var fileStream = File.Create(toProcessFilePath);
-            await s3Stream.CopyToAsync(fileStream, cancellationToken);
-
-            fileStream.Position = 0;
-            var fileDuration = _audioJobStorageService.GetWavDuration(fileStream) ?? TimeSpan.Zero;
-            await _transcriptionJobRepository.UpdateDurationAsync(fileKey, fileDuration, new Guid(userId));
+            {
+                await using var s3Stream = await _audioJobStorageService.DownloadAudioAsync(fileKey, cancellationToken);
+                await using var fileStream = File.Create(toProcessFilePath);
+                await s3Stream.CopyToAsync(fileStream, cancellationToken);
+            }
 
             await _transcriptionJobRepository.UpdateStatusAsync(fileKey, null,
                 TranscriptionJobStatus.Processing, new Guid(userId));
@@ -199,9 +194,11 @@ public class TranscriptionJob : ITranscriptionJob
             await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
                 new TranscriptionProcessMessage(JobStatus.Processing, fileKey, null));
 
-            await using var outPutFileStream = File.Create(outputFilePath);
-            await _streamableTranscriptionExporter.ToJsonAsync(transcriptionResult, outPutFileStream,
-                cancellationToken);
+            {
+                await using var outPutFileStream = File.Create(outputFilePath);
+                await _streamableTranscriptionExporter.ToJsonAsync(transcriptionResult, outPutFileStream,
+                    cancellationToken);
+            }
 
             if (_hostEnvironment.IsDevelopment())
             {
