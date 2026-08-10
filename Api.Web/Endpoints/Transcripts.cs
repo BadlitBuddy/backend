@@ -1,4 +1,5 @@
 using Api.Application.Common.Models;
+using Api.Application.Transcripts.Commands.Transcribe;
 using Api.Application.Transcripts.Dtos;
 using Api.Application.Transcripts.Querries;
 using Api.Application.Transcripts.Querries.GetTranscriptDownloadUrl;
@@ -13,8 +14,25 @@ public class Transcripts : IEndpointGroup
     {
         groupBuilder.RequireAuthorization();
 
+        groupBuilder.MapPost(TranscribeFile).AllowAnonymous();
         groupBuilder.MapGet(GetTranscripts);
         groupBuilder.MapGet(GetTranscriptDownloadUrl, "{id}/download-url");
+    }
+
+    [EndpointSummary("Transcribe a file")]
+    [EndpointDescription(
+        "Transcribes an audio file given an object key, returning the details of the transcribed result upon success.")]
+    public static async Task<Results<ProblemHttpResult, Ok<TranscribedFileResponse>>> TranscribeFile(
+        [FromBody] TranscribeFileCommand command, ISender sender)
+    {
+        var result = await sender.Send(command);
+
+        if (result.IsFailure)
+        {
+            return result.ToProblemResult();
+        }
+
+        return TypedResults.Ok(result.Value);
     }
 
     [EndpointSummary("Get Transcripts")]
