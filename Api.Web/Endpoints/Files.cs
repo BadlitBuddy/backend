@@ -1,7 +1,6 @@
 using Api.Application.Common.Interfaces;
 using Api.Application.Files.Commands.UpdateFileStatus;
 using Api.Application.Files.Queries.GetUploadPresignedUrl;
-using Api.Domain.Enums;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -21,7 +20,8 @@ public class Files : IEndpointGroup
     {
         groupBuilder.RequireAuthorization();
 
-        groupBuilder.MapPost(Upload);
+        groupBuilder.MapPost(Upload).AllowAnonymous();
+        // TODO: This is not  RESTful consolidate under Transcripts
         groupBuilder.MapPost("status", UpdateStatus);
         groupBuilder.MapPost("events", Events);
     }

@@ -1,4 +1,5 @@
 using Hangfire;
+using Hangfire.States;
 using Shared.Abstractions.Jobs;
 
 namespace Shared.Infrastructure.Jobs;
@@ -21,7 +22,7 @@ public class HangfireTranscriptionJobScheduler : ITranscriptionJobScheduler
 
     public string EnqueueTranscriptionJobWithWhisperTinyEn(string objectFileKey, CancellationToken cancellationToken)
     {
-        return _backgroundJobClient.Enqueue<ITranscriptionJob>(jobService =>
+        return _backgroundJobClient.Enqueue<TranscriptionJob>(jobService =>
             jobService.TranscribeFileWithWhisperTinyEnAsync(objectFileKey, cancellationToken)
         );
     }

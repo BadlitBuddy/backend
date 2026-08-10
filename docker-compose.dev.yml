@@ -1,0 +1,74 @@
+name: wordscribe-dev
+services:
+  api:
+    build:
+      context: .
+      dockerfile: api.Dockerfile
+    image: kjbdev/bb-api:dev
+    container_name: bb-api
+    ports:
+      - "5000:8080"
+    env_file:
+      - .env
+    environment:
+      ConnectionStrings__Redis: redis:6379
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=wordscribe;Username=wordscribe;Password=wordscribe-dev-password
+    restart: unless-stopped
+    depends_on:
+      - redis
+      - postgres
+  whisper-service-default:
+    build:
+      context: .
+      dockerfile: whisper-service.Dockerfile
+    image: kjbdev/bb-whisper-service:dev
+    container_name: bb-whisper-service-default
+    ports:
+      - "5001:8080"
+    env_file:
+      - .env
+    environment:
+      ConnectionStrings__Redis: redis:6379
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=wordscribe;Username=wordscribe;Password=wordscribe-dev-password
+    restart: unless-stopped
+    depends_on:
+      - redis
+      - postgres
+  whisper-service-public:
+    build:
+      context: .
+      dockerfile: whisper-service.Dockerfile
+    image: kjbdev/bb-whisper-service:dev
+    container_name: bb-whisper-service-public
+    ports:
+      - "5002:8080"
+    env_file:
+      - .env
+    environment:
+      ConnectionStrings__Redis: redis:6379
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=wordscribe;Username=wordscribe;Password=wordscribe-dev-password
+      HangfireServer__WorkerCount: 1
+      HangfireServer__Queues__0: whisper-tiny-en
+    restart: unless-stopped
+    depends_on:
+      - redis
+      - postgres
+  redis:
+    image: redis:8-alpine
+    container_name: wordscribe-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+  postgres:
+    image: postgres:18-alpine
+    container_name: wordscribe-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: wordscribe
+      POSTGRES_USER: wordscribe
+      POSTGRES_PASSWORD: wordscribe-dev-password
+    volumes:
+      - postgres-data:/var/lib/postgresql
+volumes:
+  redis-data:
+  postgres-data:

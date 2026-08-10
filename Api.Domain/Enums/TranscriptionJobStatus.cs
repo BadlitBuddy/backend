@@ -7,5 +7,9 @@ public enum TranscriptionJobStatus
     [Description("Processing")]
     Processing = 1,
     [Description("Completed")]
-    Completed = 2
+    Completed = 2,
+    [Description("Canceled")]
+    Canceled = 3,
+    [Description("Failed")]
+    Failed = 4
 }

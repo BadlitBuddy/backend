@@ -10,8 +10,9 @@ public class TranscriptionJobConfiguration : BaseAuditableEntityConfiguration<Tr
         builder.Property(x => x.ProcessedObjectKey).HasMaxLength(250);
 
         builder.HasOne(x => x.User)
-            .WithMany(x=> x.TranscriptionJobs)
+            .WithMany(x => x.TranscriptionJobs)
             .HasForeignKey(x => x.UserId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Restrict)
+            .IsRequired(false);
     }
 }
