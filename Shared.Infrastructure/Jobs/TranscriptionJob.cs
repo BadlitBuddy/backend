@@ -52,24 +52,14 @@ public class TranscriptionJob : ITranscriptionJob
 
     public async Task TranscribeFileAsync(string fileKey, CancellationToken cancellationToken)
     {
-        var isValidFile =
-            await _audioJobStorageService.IsWhisperCompatibleWavAsync(fileKey, cancellationToken: cancellationToken);
-        if (!isValidFile)
+        var isFileValid = await IsFileValid(fileKey, cancellationToken);
+        if (!isFileValid)
         {
-            _logger.LogWarning("File with key: {FileKey} is invalid", fileKey);
-            return;
+            throw new InvalidOperationException();
         }
 
-        string toProcessDir = Path.Combine(AppContext.BaseDirectory, "MediaFiles", "ToProcess");
-        string processedDir = Path.Combine(AppContext.BaseDirectory, "MediaFiles", "Processed");
-        Directory.CreateDirectory(toProcessDir);
-        Directory.CreateDirectory(processedDir);
-
-        string toProcessFilePath = Path.Combine(toProcessDir, Path.GetFileName(fileKey));
-
-        string outputFileName = Path.ChangeExtension(Path.GetFileName(fileKey), ".json");
-        string outputFilePath = Path.Combine(processedDir, outputFileName);
-
+        var (toProcessDir, processedDir) = CreateWorkingDirs();
+        var (toProcessFilePath, processedFilePath) = CreateWorkingFilePaths(toProcessDir, processedDir, fileKey);
         var (userId, originalFileName) = StoragePathBuilder.ExtractUnprocessedFileKeyParts(fileKey);
 
         string? outputObjectKey = null;
@@ -77,11 +67,7 @@ public class TranscriptionJob : ITranscriptionJob
         {
             _logger.LogInformation("Starting Whisper transcription for: {FileKey}", fileKey);
 
-            {
-                await using var s3Stream = await _audioJobStorageService.DownloadAudioAsync(fileKey, cancellationToken);
-                await using var fileStream = File.Create(toProcessFilePath);
-                await s3Stream.CopyToAsync(fileStream, cancellationToken);
-            }
+            await DownloadAndSaveFileAsync(toProcessFilePath, fileKey, cancellationToken);
 
             await _transcriptionJobRepository.UpdateStatusAsync(fileKey, null,
                 TranscriptionJobStatus.Processing, new Guid(userId));
@@ -89,21 +75,21 @@ public class TranscriptionJob : ITranscriptionJob
             switch (_workerOptions.TranscriptionProvider)
             {
                 case TranscriptionProvider.WhisperNet:
-                    await TranscribeWithWhisperNet(toProcessFilePath, outputFilePath, fileKey,
+                    await TranscribeWithWhisperNet(toProcessFilePath, processedFilePath, fileKey,
                         cancellationToken);
                     break;
                 case TranscriptionProvider.Groq:
-                    await TranscribeWithGroq(outputFilePath, fileKey, cancellationToken);
+                    await TranscribeWithGroq(processedFilePath, fileKey, cancellationToken);
                     break;
                 case TranscriptionProvider.Cloudflare:
-                    await TranscribeWithCloudflare(toProcessFilePath, outputFilePath, fileKey, cancellationToken);
+                    await TranscribeWithCloudflare(toProcessFilePath, processedFilePath, fileKey, cancellationToken);
                     break;
                 default:
                     throw new InvalidOperationException("Unknown transcription provider");
             }
 
             await using (var uploadStream = new FileStream(
-                             outputFilePath,
+                             processedFilePath,
                              FileMode.Open,
                              FileAccess.Read,
                              FileShare.Read,
@@ -129,11 +115,12 @@ public class TranscriptionJob : ITranscriptionJob
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to process {FileKey}", fileKey);
+            throw;
         }
         finally
         {
             if (File.Exists(toProcessFilePath)) File.Delete(toProcessFilePath);
-            if (File.Exists(outputFilePath)) File.Delete(outputFilePath);
+            if (File.Exists(processedFilePath)) File.Delete(processedFilePath);
 
             await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
                 new TranscriptionProcessMessage(JobStatus.Finished, fileKey, outputObjectKey));
@@ -143,23 +130,14 @@ public class TranscriptionJob : ITranscriptionJob
     [Queue(HangfireQueueConstants.WhisperTinyEn)]
     public async Task TranscribeFileWithWhisperTinyEnAsync(string fileKey, CancellationToken cancellationToken)
     {
-        var isValidFile =
-            await _audioJobStorageService.IsWhisperCompatibleWavAsync(fileKey, cancellationToken: cancellationToken);
-        if (!isValidFile)
+        var isFileValid = await IsFileValid(fileKey, cancellationToken);
+        if (!isFileValid)
         {
-            _logger.LogWarning("File with key: {FileKey} is invalid", fileKey);
-            return;
+            throw new InvalidOperationException();
         }
 
-        string toProcessDir = Path.Combine(AppContext.BaseDirectory, "MediaFiles", "ToProcess");
-        string processedDir = Path.Combine(AppContext.BaseDirectory, "MediaFiles", "Processed");
-        Directory.CreateDirectory(toProcessDir);
-        Directory.CreateDirectory(processedDir);
-
-        string toProcessFilePath = Path.Combine(toProcessDir, Path.GetFileName(fileKey));
-
-        string outputFileName = Path.ChangeExtension(Path.GetFileName(fileKey), ".json");
-        string outputFilePath = Path.Combine(processedDir, outputFileName);
+        var (toProcessDir, processedDir) = CreateWorkingDirs();
+        var (toProcessFilePath, processedFilePath) = CreateWorkingFilePaths(toProcessDir, processedDir, fileKey);
 
         var (userId, originalFileName) = StoragePathBuilder.ExtractUnprocessedFileKeyParts(fileKey);
 
@@ -195,7 +173,7 @@ public class TranscriptionJob : ITranscriptionJob
                 new TranscriptionProcessMessage(JobStatus.Processing, fileKey, null));
 
             {
-                await using var outPutFileStream = File.Create(outputFilePath);
+                await using var outPutFileStream = File.Create(processedFilePath);
                 await _streamableTranscriptionExporter.ToJsonAsync(transcriptionResult, outPutFileStream,
                     cancellationToken);
             }
@@ -206,7 +184,7 @@ public class TranscriptionJob : ITranscriptionJob
             }
 
             await using (var uploadStream = new FileStream(
-                             outputFilePath,
+                             processedFilePath,
                              FileMode.Open,
                              FileAccess.Read,
                              FileShare.Read,
@@ -232,11 +210,12 @@ public class TranscriptionJob : ITranscriptionJob
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to process {FileKey}", fileKey);
+            throw;
         }
         finally
         {
             if (File.Exists(toProcessFilePath)) File.Delete(toProcessFilePath);
-            if (File.Exists(outputFilePath)) File.Delete(outputFilePath);
+            if (File.Exists(processedFilePath)) File.Delete(processedFilePath);
 
             await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
                 new TranscriptionProcessMessage(JobStatus.Finished, fileKey, outputObjectKey));
@@ -337,5 +316,49 @@ public class TranscriptionJob : ITranscriptionJob
         {
             _logger.LogInformation("Transcribed text: {Text}", transcriptionResult.Text);
         }
+    }
+
+    private async Task<bool> IsFileValid(string unProcessedObjectKey, CancellationToken cancellationToken)
+    {
+        var isValidFile =
+            await _audioJobStorageService.IsWhisperCompatibleWavAsync(unProcessedObjectKey,
+                cancellationToken: cancellationToken);
+
+        if (!isValidFile)
+        {
+            _logger.LogWarning("File with key: {FileKey} is invalid", unProcessedObjectKey);
+            return false;
+        }
+
+        return true;
+    }
+
+    private static (string toProcessDir, string processedDir) CreateWorkingDirs()
+    {
+        string toProcessDir = Path.Combine(AppContext.BaseDirectory, "MediaFiles", "ToProcess");
+        string processedDir = Path.Combine(AppContext.BaseDirectory, "MediaFiles", "Processed");
+        Directory.CreateDirectory(toProcessDir);
+        Directory.CreateDirectory(processedDir);
+
+        return (toProcessDir, processedDir);
+    }
+
+    private static (string toProcessFilePath, string processedFilePath) CreateWorkingFilePaths(string toProcessDir,
+        string processedDir, string fileKey)
+    {
+        string toProcessFilePath = Path.Combine(toProcessDir, Path.GetFileName(fileKey));
+        string processedFileName = Path.ChangeExtension(Path.GetFileName(fileKey), ".json");
+        string processedFilePath = Path.Combine(processedDir, processedFileName);
+
+        return (toProcessFilePath, processedFilePath);
+    }
+
+    private async Task DownloadAndSaveFileAsync(string toProcessFilePath, string unProcessedObjectKey,
+        CancellationToken cancellationToken)
+    {
+        await using var s3Stream =
+            await _audioJobStorageService.DownloadAudioAsync(unProcessedObjectKey, cancellationToken);
+        await using var fileStream = File.Create(toProcessFilePath);
+        await s3Stream.CopyToAsync(fileStream, cancellationToken);
     }
 }
