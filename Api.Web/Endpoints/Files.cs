@@ -14,14 +14,14 @@ public record UpdateStatusRequest(string? ProcessedObjectKey, TranscriptionJobSt
 
 public record FileEventRequest(string[] UnprocessedObjectKeys);
 
-// TODO: This is not  RESTful consolidate under Transcripts
 public class Files : IEndpointGroup
 {
     public static void Map(RouteGroupBuilder groupBuilder)
     {
         groupBuilder.RequireAuthorization();
 
-        groupBuilder.MapPost(Upload);
+        groupBuilder.MapPost(Upload).AllowAnonymous();
+        // TODO: This is not  RESTful consolidate under Transcripts
         groupBuilder.MapPost("status", UpdateStatus);
         groupBuilder.MapPost("events", Events);
     }
