@@ -2,9 +2,10 @@ using Api.Domain.Events;
 
 namespace Api.Domain.Entities;
 
+// TODO: rename this entity to 'Transcripts'
 public class TranscriptionJob : BaseAuditableEntity<int>
 {
-    public Guid UserId { get; set; }
+    public Guid? UserId { get; set; }
     public User? User { get; set; }
     public required string UnprocessedObjectKey { get; set; }
     public string? ProcessedObjectKey { get; set; }
@@ -41,5 +42,15 @@ public class TranscriptionJob : BaseAuditableEntity<int>
         }
 
         JobStatus = TranscriptionJobStatus.Completed;
+    }
+
+    public void MarkAsCanceled()
+    {
+        JobStatus = TranscriptionJobStatus.Canceled;
+    }
+
+    public void MarkAsFailed()
+    {
+        JobStatus = TranscriptionJobStatus.Failed;
     }
 }

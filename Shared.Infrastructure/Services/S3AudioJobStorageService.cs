@@ -40,6 +40,24 @@ public class S3AudioJobStorageService : IAudioJobStorageService
         }
     }
 
+    public async Task<bool> DoesObjectExistAsync(string fileKey, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _s3Client.GetObjectMetadataAsync(new GetObjectMetadataRequest
+            {
+                BucketName = _options.Value.BucketName,
+                Key = fileKey
+            }, cancellationToken);
+
+            return true;
+        }
+        catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return false;
+        }
+    }
+
     public async Task<bool> IsWhisperCompatibleWavAsync(string fileKey, long? maxSizeBytes = 100L * 1024 * 1024,
         CancellationToken cancellationToken = default)
     {
@@ -134,11 +152,16 @@ public class S3AudioJobStorageService : IAudioJobStorageService
             var request = new GetObjectRequest
             {
                 BucketName = _options.Value.BucketName,
-                Key = fileKey
+                Key = fileKey,
+                ByteRange = new ByteRange(0, 65535)
             };
 
             using var response = await _s3Client.GetObjectAsync(request, cancellationToken);
-            await using var reader = new WaveFileReader(response.ResponseStream);
+            using var ms = new MemoryStream(65536);
+            await response.ResponseStream.CopyToAsync(ms, cancellationToken);
+            ms.Position = 0;
+
+            using var reader = new WaveFileReader(ms);
 
             return reader.TotalTime;
         }

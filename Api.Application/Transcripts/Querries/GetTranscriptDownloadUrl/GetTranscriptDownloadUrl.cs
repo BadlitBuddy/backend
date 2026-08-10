@@ -14,14 +14,12 @@ public class
     GetTranscriptDownloadUrlHandler : IRequestHandler<GetTranscriptDownloadUrlQuery, Result<TranscriptDownloadUrlDto>>
 {
     private readonly IApplicationDbContext _dbContext;
-    private readonly IUser _currentUser;
     private readonly IAudioJobStorageService _audioJobStorageService;
 
-    public GetTranscriptDownloadUrlHandler(IApplicationDbContext dbContext, IUser currentUser,
+    public GetTranscriptDownloadUrlHandler(IApplicationDbContext dbContext,
         IAudioJobStorageService audioJobStorageService)
     {
         _dbContext = dbContext;
-        _currentUser = currentUser;
         _audioJobStorageService = audioJobStorageService;
     }
 
@@ -31,7 +29,6 @@ public class
         var transcript = await _dbContext.TranscriptionJobs
             .FirstOrDefaultAsync(
                 tj => tj.PublicId == request.Id &&
-                      tj.UserId == Guid.Parse(_currentUser.Id!) &&
                       tj.JobStatus == TranscriptionJobStatus.Completed &&
                       tj.ProcessedObjectKey != null, cancellationToken: cancellationToken);
 

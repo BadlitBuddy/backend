@@ -23,12 +23,30 @@ public class GetUploadPresignedUrlHandler : IRequestHandler<GetUploadPresignedUr
     public async Task<Result<UploadUrlDto>> Handle(GetUploadPresignedUrlQuery request,
         CancellationToken cancellationToken)
     {
-        Guard.Against.NullOrWhiteSpace(_currentUser.Id, nameof(_currentUser.Id));
+        List<string> allowedExtensions = [".wav"];
 
+        char[] invalidChars = Path.GetInvalidFileNameChars();
+
+        string fileName = Path.GetFileName(request.FileName);
+        string cleanFileName = string.Concat(fileName.Split(invalidChars));
+        string fileExtension = Path.GetExtension(cleanFileName);
+
+        if (cleanFileName.Length > 30)
+        {
+            return Result<UploadUrlDto>.Failure(
+                ["File name is too long. Please rename to be under 30 characters long."]);
+        }
+
+        if (!allowedExtensions.Contains(fileExtension))
+        {
+            return Result<UploadUrlDto>.Failure(
+                [$"File must be one of the following {string.Join(",", allowedExtensions)}"]);
+        }
+
+        var userId = _currentUser.IsAuthenticated ? _currentUser.Id! : "019feb11-ff3d-7fef-8323-1c53f0e3b0da";
         try
         {
-            var presignedUrlResult = await _audioJobStorageService.CreateUploadUrlAsync(_currentUser.Id,
-                request.FileName);
+            var presignedUrlResult = await _audioJobStorageService.CreateUploadUrlAsync(userId, cleanFileName);
             return Result<UploadUrlDto>.Success(presignedUrlResult);
         }
         catch (Exception)

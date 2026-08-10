@@ -12,9 +12,9 @@ public class CfWhisperTinyEnResponse
 
     [JsonPropertyName("vtt")] public string Vtt { get; set; } = string.Empty;
 
-    [JsonPropertyName("words")] public List<CfWhisperTinyEnTranscriptionWord> Words { get; set; } = new();
+    [JsonPropertyName("words")] public List<CfWhisperTinyEnTranscriptionWord>? Words { get; set; } = [];
 
-    [JsonPropertyName("segments")] public List<CfWhisperTinyEnTranscriptionSegment> Segments { get; set; } = new();
+    [JsonPropertyName("segments")] public List<CfWhisperTinyEnTranscriptionSegment>? Segments { get; set; } = [];
 
     [JsonPropertyName("usage")] public CfWhisperTinyEnTranscriptionUsage Usage { get; set; } = new();
 }
@@ -45,7 +45,7 @@ public class CfWhisperTinyEnTranscriptionSegment
 
     [JsonPropertyName("no_speech_prob")] public float? NoSpeechProb { get; set; }
 
-    [JsonPropertyName("words")] public List<CfWhisperTinyEnTranscriptionWord> Words { get; set; } = new();
+    [JsonPropertyName("words")] public List<CfWhisperTinyEnTranscriptionWord>? Words { get; set; } = [];
 
     [JsonPropertyName("word_count")] public int? WordCount { get; set; }
 }
@@ -79,8 +79,8 @@ public static class CfWhisperTinyEnResponseMapper
             Text = r.Text,
             WordCount = r.WordCount,
             Vtt = r.Vtt,
-            Words = r.Words.Select(ToWord).ToArray(),
-            Segments = r.Segments.Select(ToSegment).ToArray(),
+            Words = r.Words?.Select(ToWord).ToArray() ?? [],
+            Segments = r.Segments?.Select(ToSegment).ToArray() ?? [],
             ProviderModelId = TranscriptionProvider.Cloudflare
         };
     }
@@ -94,7 +94,7 @@ public static class CfWhisperTinyEnResponseMapper
         AverageLogProbability = s.AvgLogprob,
         CompressionRatio = s.CompressionRatio,
         Temperature = s.Temperature,
-        Words = s.Words.Select(ToWord).ToArray()
+        Words = s.Words?.Select(ToWord).ToArray() ?? []
     };
 
     private static TranscriptionWord ToWord(CfWhisperTinyEnTranscriptionWord w) => new()
