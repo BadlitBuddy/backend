@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using Aspire.ServiceDefaults;
 using Infrastructure;
 using Infrastructure.Clients;
 using Infrastructure.Services;
@@ -14,6 +15,8 @@ using TinyHealthCheck;
 using WhisperService.WorkerService.Configuration;
 
 var builder = Host.CreateApplicationBuilder(args);
+
+builder.AddServiceDefaults();
 
 var healthOptions = builder.Configuration
     .GetSection("HealthCheck")

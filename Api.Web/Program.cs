@@ -2,13 +2,14 @@ using Api.Application;
 using Api.Infrastructure;
 using Api.Infrastructure.Data;
 using Api.Web;
+using Aspire.ServiceDefaults;
 using Hangfire;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Scalar.AspNetCore;
 using Shared.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddServiceDefaults();
 
 builder.AddApplicationServices();
 builder.AddInfrastructureServices();
@@ -21,9 +22,6 @@ builder.Services
     .AddS3Services()
     .AddHangFireStorage()
     .AddRedisSubscriberService();
-
-builder.Services.AddHealthChecks()
-    .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
 
 var app = builder.Build();
 
@@ -48,11 +46,7 @@ if (app.Environment.IsDevelopment())
     app.UseMigrationsEndPoint();
 }
 
-app.MapHealthChecks("/health");
-app.MapHealthChecks("/alive", new HealthCheckOptions
-{
-    Predicate = r => r.Tags.Contains("live")
-});
+app.MapDefaultEndpoints();
 
 app.UseAuthentication();
 app.UseAuthorization();
