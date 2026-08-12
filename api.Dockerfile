@@ -15,6 +15,10 @@ COPY Shared.Abstractions/*.csproj Shared.Abstractions/
 COPY Shared.Contracts/*.csproj Shared.Contracts/
 COPY Shared.Infrastructure/*.csproj Shared.Infrastructure/
 
+COPY Aspire.AppHost/*.csproj Aspire.AppHost/
+COPY Aspire.ServiceDefaults/*.csproj Aspire.ServiceDefaults/
+COPY Aspire.Shared/*.csproj Aspire.Shared/
+
 RUN dotnet restore Api.Web/Api.Web.csproj
 
 # Copy source code
@@ -28,6 +32,10 @@ COPY Shared.Common/. Shared.Common/
 COPY Shared.Abstractions/. Shared.Abstractions/
 COPY Shared.Contracts/. Shared.Contracts/
 COPY Shared.Infrastructure/. Shared.Infrastructure/
+
+COPY Aspire.AppHost/. Aspire.AppHost/
+COPY Aspire.ServiceDefaults/. Aspire.ServiceDefaults/
+COPY Aspire.Shared/. Aspire.Shared/
 
 # Publish Api.Web
 WORKDIR /source/Api.Web
