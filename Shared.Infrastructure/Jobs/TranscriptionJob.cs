@@ -35,8 +35,7 @@ public class TranscriptionJob : ITranscriptionJob
         [FromKeyedServices(TranscriptionProvider.Cloudflare)]
         ITranscriptionService cloudFlareTranscriptionService,
         [FromKeyedServices(TranscriptionProvider.Groq)]
-        ITranscriptionService groqTranscriptionService
-    )
+        ITranscriptionService groqTranscriptionService)
     {
         _transcriptionService = transcriptionService;
         _audioJobStorageService = audioJobStorageService;
@@ -160,17 +159,27 @@ public class TranscriptionJob : ITranscriptionJob
                 _logger.LogInformation("Transcribing with CLoudflare Whisper Tiny-en with key: {FileKey}", fileKey);
             }
 
-            await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
-                new TranscriptionProcessMessage(JobStatus.Processing, fileKey, null));
-
-            var transcriptionResult =
-                await _cloudFlareTranscriptionService.TranscribeAsync(
+            using var progressCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var transcriptionTask =
+                _cloudFlareTranscriptionService.TranscribeAsync(
                     new TranscriptionSource.FilePath(new FileInfo(toProcessFilePath)),
                     TranscriptionModel.WhisperTinyEn,
                     cancellationToken);
+            var progressTask = PublishProgressAsync(
+                transcriptionTask,
+                fileKey,
+                progressCts.Token);
 
-            await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
-                new TranscriptionProcessMessage(JobStatus.Processing, fileKey, null));
+            TranscriptionResult transcriptionResult;
+            try
+            {
+                transcriptionResult = await transcriptionTask;
+            }
+            finally
+            {
+                await progressCts.CancelAsync();
+                await progressTask;
+            }
 
             {
                 await using var outPutFileStream = File.Create(processedFilePath);
@@ -267,18 +276,28 @@ public class TranscriptionJob : ITranscriptionJob
             _logger.LogInformation("Transcribing with Groq");
         }
 
-        await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
-            new TranscriptionProcessMessage(JobStatus.Processing, fileKey, null));
-
         var (fileUri, _) = await _audioJobStorageService.CreateDownloadUrlAsync(fileKey, cancellationToken);
 
-        var transcriptionResult =
-            await _groqTranscriptionService.TranscribeAsync(new TranscriptionSource.Url(fileUri),
+        using var progressCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var transcriptionTask =
+            _groqTranscriptionService.TranscribeAsync(new TranscriptionSource.Url(fileUri),
                 TranscriptionModel.WhisperV3LargeTurbo,
-                cancellationToken);
+                progressCts.Token);
+        var progressTask = PublishProgressAsync(
+            transcriptionTask,
+            fileKey,
+            progressCts.Token);
 
-        await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
-            new TranscriptionProcessMessage(JobStatus.Processing, fileKey, null));
+        TranscriptionResult transcriptionResult;
+        try
+        {
+            transcriptionResult = await transcriptionTask;
+        }
+        finally
+        {
+            await progressCts.CancelAsync();
+            await progressTask;
+        }
 
         await using var fileStream = File.Create(outputFilePath);
         await _streamableTranscriptionExporter.ToJsonAsync(transcriptionResult, fileStream, cancellationToken);
@@ -297,17 +316,27 @@ public class TranscriptionJob : ITranscriptionJob
             _logger.LogInformation("Transcribing with CLoudflare");
         }
 
-        await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
-            new TranscriptionProcessMessage(JobStatus.Processing, fileKey, null));
-
-        var transcriptionResult =
-            await _cloudFlareTranscriptionService.TranscribeAsync(
+        using var progressCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var transcriptionTask =
+            _cloudFlareTranscriptionService.TranscribeAsync(
                 new TranscriptionSource.FilePath(new FileInfo(toProcessFilePath)),
                 TranscriptionModel.WhisperV3LargeTurbo,
                 cancellationToken);
+        var progressTask = PublishProgressAsync(
+            transcriptionTask,
+            fileKey,
+            progressCts.Token);
 
-        await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
-            new TranscriptionProcessMessage(JobStatus.Processing, fileKey, null));
+        TranscriptionResult transcriptionResult;
+        try
+        {
+            transcriptionResult = await transcriptionTask;
+        }
+        finally
+        {
+            await progressCts.CancelAsync();
+            await progressTask;
+        }
 
         await using var fileStream = File.Create(outputFilePath);
         await _streamableTranscriptionExporter.ToJsonAsync(transcriptionResult, fileStream, cancellationToken);
@@ -360,5 +389,29 @@ public class TranscriptionJob : ITranscriptionJob
             await _audioJobStorageService.DownloadAudioAsync(unProcessedObjectKey, cancellationToken);
         await using var fileStream = File.Create(toProcessFilePath);
         await s3Stream.CopyToAsync(fileStream, cancellationToken);
+    }
+
+    private async Task PublishProgressAsync(
+        Task transcriptionTask,
+        string unprocessedWavFileObjectKey,
+        CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
+
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                if (transcriptionTask.IsCompleted)
+                    break;
+
+                await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
+                    new TranscriptionProcessMessage(JobStatus.Processing, unprocessedWavFileObjectKey, null));
+            }
+        }
+        catch (OperationCanceledException)
+            when (cancellationToken.IsCancellationRequested)
+        {
+        }
     }
 }
