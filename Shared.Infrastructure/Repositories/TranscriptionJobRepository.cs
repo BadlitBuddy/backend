@@ -68,36 +68,4 @@ public class TranscriptionJobRepository : ITranscriptionJobRepository
 
         return result;
     }
-
-    public async Task<TranscriptionJobDto?> UpdateDurationAsync(string unprocessedObjectKey, TimeSpan duration,
-        Guid userId)
-    {
-        const string sql = @"
-                           UPDATE public.""TranscriptionJobs""
-                           SET
-                               ""Duration"" = @Duration,
-                               ""LastModifiedBy""      = @UserId,
-                               ""LastModified""         = NOW()
-                           WHERE ""UnprocessedObjectKey"" = @UnprocessedObjectKey
-                             AND ""UserId""               = @UserId
-                           RETURNING
-                               ""UserId"",
-                               ""UnprocessedObjectKey"",
-                               ""ProcessedObjectKey"",
-                               ""JobStatus""
-                               ";
-
-        using var connection = _dbContext.CreateConnection();
-
-        var result = await connection.QuerySingleOrDefaultAsync<TranscriptionJobDto>(
-            sql,
-            new
-            {
-                UnprocessedObjectKey = unprocessedObjectKey,
-                Duration = duration,
-                UserId = userId
-            });
-
-        return result;
-    }
 }

@@ -7,6 +7,7 @@ namespace Shared.Abstractions.Repositories;
 public interface ITranscriptionJobRepository
 {
     Task<TranscriptionJob?> GetByUnprocessedObjectKeyAsync(string unprocessedObjectKey, Guid userId);
-    Task<TranscriptionJobDto?> UpdateStatusAsync(string unprocessedObjectKey, string? processedObjectKey, TranscriptionJobStatus status, Guid userId);
-    Task<TranscriptionJobDto?> UpdateDurationAsync(string unprocessedObjectKey, TimeSpan duration, Guid userId);
+
+    Task<TranscriptionJobDto?> UpdateStatusAsync(string unprocessedObjectKey, string? processedObjectKey,
+        TranscriptionJobStatus status, Guid userId);
 }
