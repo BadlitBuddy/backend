@@ -16,7 +16,7 @@ public interface IAudioJobStorageService
     TimeSpan? GetWavDuration(
         FileStream streamInput);
 
-    Task<UploadUrlDto> CreateUploadUrlAsync(string userId, string originalFileName);
+    Task<UploadUrlDto> CreateUploadUrlAsync(string userId, string originalFileName, long fileSize);
     Task<IEnumerable<AudioJobDto>> GetPendingJobsAsync(int batchSize, CancellationToken cancellationToken);
 
     Task<string> UploadTranscriptionAsync(string userId, string originalFileName, Stream audioStream,

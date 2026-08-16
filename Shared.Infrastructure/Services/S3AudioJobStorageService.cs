@@ -198,7 +198,7 @@ public class S3AudioJobStorageService : IAudioJobStorageService
         }
     }
 
-    public async Task<UploadUrlDto> CreateUploadUrlAsync(string userId, string originalFileName)
+    public async Task<UploadUrlDto> CreateUploadUrlAsync(string userId, string originalFileName, long fileSize)
     {
         var fileExtension = Path.GetExtension(originalFileName);
         if (!string.Equals(fileExtension, ".wav",
@@ -216,6 +216,7 @@ public class S3AudioJobStorageService : IAudioJobStorageService
             ContentType = "audio/wav",
             Expires = DateTime.UtcNow.AddMinutes(15)
         };
+        request.Headers["Content-Length"] = fileSize.ToString();
 
         var response = await _s3Client.GetPreSignedURLAsync(request);
         return new UploadUrlDto
