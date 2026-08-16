@@ -1,10 +1,15 @@
+using Api.Application.Common.Interfaces;
 using Api.Application.Common.Models;
 using Api.Application.Transcripts.Commands.Transcribe;
 using Api.Application.Transcripts.Dtos;
 using Api.Application.Transcripts.Querries;
 using Api.Application.Transcripts.Querries.GetTranscriptDownloadUrl;
+using Api.Domain.Enums;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Shared.Abstractions.Services;
+using Shared.Contracts.Enums;
 
 namespace Api.Web.Endpoints;
 
@@ -17,6 +22,7 @@ public class Transcripts : IEndpointGroup
         groupBuilder.MapPost(TranscribeFile).AllowAnonymous();
         groupBuilder.MapGet(GetTranscripts);
         groupBuilder.MapGet(GetTranscriptDownloadUrl, "{id}/download-url");
+        groupBuilder.MapGet(Events, "{id}/events").AllowAnonymous();
     }
 
     [EndpointSummary("Transcribe a file")]
@@ -75,5 +81,46 @@ public class Transcripts : IEndpointGroup
         }
 
         return TypedResults.Ok(result.Value);
+    }
+
+    [EndpointSummary("Events")]
+    [EndpointDescription("Events related to the files")]
+    public async static Task<Results<ServerSentEventsResult<TranscriptionProcessMessage>, ProblemHttpResult>> Events(
+        [FromRoute] string id, IMessageSubscriber messageSubscriber,
+        IApplicationDbContext dbContext, CancellationToken cancellationToken)
+    {
+        var transcription = await dbContext.TranscriptionJobs
+            .FirstOrDefaultAsync(tj =>
+                tj.JobStatus != TranscriptionJobStatus.Completed &&
+                tj.PublicId == id, cancellationToken: cancellationToken);
+
+        if (transcription == null)
+        {
+            return TypedResults.Problem(
+                detail: "No transcription is associated with the provided id.",
+                statusCode: StatusCodes.Status404NotFound,
+                title: "Resource Not Found");
+        }
+
+        return TypedResults.ServerSentEvents(
+            GetEvents(),
+            eventType: "transcription-event");
+
+        async IAsyncEnumerable<TranscriptionProcessMessage> GetEvents()
+        {
+            await foreach (var message in messageSubscriber
+                               .SubscribeAsync<TranscriptionProcessMessage>(
+                                   MessageChannel.TranscriptionProcess)
+                               .WithCancellation(cancellationToken))
+            {
+                if (transcription.UnprocessedObjectKey != message.UnprocessedWavFileObjectKey)
+                    continue;
+
+                yield return message;
+
+                if (message.JobStatus == JobStatus.Finished)
+                    yield break;
+            }
+        }
     }
 }
