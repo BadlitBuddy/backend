@@ -210,8 +210,9 @@ public class TranscriptionJob : ITranscriptionJob
                 outputObjectKey = uploadResult;
             }
 
-            await _transcriptionJobRepository.UpdateStatusAsync(fileKey, outputObjectKey,
-                TranscriptionJobStatus.Completed, new Guid(userId));
+            _logger.LogInformation("Updating processed object key: {FileKey}", outputObjectKey);
+            await _transcriptionJobRepository.UpdateProcessedObjectKeyAsync(fileKey, outputObjectKey,
+                TranscriptionJobStatus.Completed);
             await _audioJobStorageService.DeleteAudioAsync(fileKey, cancellationToken);
 
             _logger.LogInformation("Finished transcription and cleanup for: {FileKey}", fileKey);
