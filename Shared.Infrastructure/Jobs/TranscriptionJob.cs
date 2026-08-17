@@ -276,7 +276,9 @@ public class TranscriptionJob : ITranscriptionJob
             _logger.LogInformation("Transcribing with Groq");
         }
 
-        var (fileUri, _) = await _audioJobStorageService.CreateDownloadUrlAsync(fileKey, cancellationToken);
+        var (fileUri, _) =
+            await _audioJobStorageService.CreateDownloadUrlAsync(fileKey, DateTime.UtcNow.AddHours(1),
+                cancellationToken);
 
         using var progressCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var transcriptionTask =
