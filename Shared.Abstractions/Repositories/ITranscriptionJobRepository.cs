@@ -10,4 +10,8 @@ public interface ITranscriptionJobRepository
 
     Task<TranscriptionJobDto?> UpdateStatusAsync(string unprocessedObjectKey, string? processedObjectKey,
         TranscriptionJobStatus status, Guid userId);
+
+    Task<TranscriptionJobSummaryDto?> UpdateProcessedObjectKeyAsync(string unprocessedObjectKey,
+        string processedObjectKey,
+        TranscriptionJobStatus status);
 }

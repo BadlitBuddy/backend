@@ -68,4 +68,35 @@ public class TranscriptionJobRepository : ITranscriptionJobRepository
 
         return result;
     }
+
+    public async Task<TranscriptionJobSummaryDto?> UpdateProcessedObjectKeyAsync(string unprocessedObjectKey,
+        string processedObjectKey,
+        TranscriptionJobStatus status)
+    {
+        const string sql = @"
+                           UPDATE public.""TranscriptionJobs""
+                           SET
+                               ""ProcessedObjectKey"" = @ProcessedObjectKey,
+                               ""JobStatus""            = @JobStatus,
+                               ""LastModified""         = NOW()
+                           WHERE ""UnprocessedObjectKey"" = @UnprocessedObjectKey
+                           RETURNING
+                               ""UnprocessedObjectKey"",
+                               ""ProcessedObjectKey"",
+                               ""JobStatus""
+                               ";
+
+        using var connection = _dbContext.CreateConnection();
+
+        var result = await connection.QuerySingleOrDefaultAsync<TranscriptionJobSummaryDto>(
+            sql,
+            new
+            {
+                UnprocessedObjectKey = unprocessedObjectKey,
+                ProcessedObjectKey = processedObjectKey,
+                JobStatus = (int)status
+            });
+
+        return result;
+    }
 }
