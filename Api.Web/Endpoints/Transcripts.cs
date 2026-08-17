@@ -21,7 +21,7 @@ public class Transcripts : IEndpointGroup
 
         groupBuilder.MapPost(TranscribeFile).AllowAnonymous();
         groupBuilder.MapGet(GetTranscripts);
-        groupBuilder.MapGet(GetTranscriptDownloadUrl, "{id}/download-url");
+        groupBuilder.MapGet(GetTranscriptDownloadUrl, "{id}/download-url").AllowAnonymous();
         groupBuilder.MapGet(Events, "{id}/events").AllowAnonymous();
     }
 
