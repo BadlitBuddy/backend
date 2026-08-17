@@ -304,12 +304,11 @@ public class S3AudioJobStorageService : IAudioJobStorageService
         }
     }
 
-    public async Task<(Uri uri, DateTime expiry)> CreateDownloadUrlAsync(string fileKey,
+    public async Task<(Uri uri, DateTime expiry)> CreateDownloadUrlAsync(string fileKey, DateTime expiry,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var expiry = DateTime.UtcNow.AddHours(1);
         var request = new GetPreSignedUrlRequest
         {
             BucketName = _options.Value.BucketName,
