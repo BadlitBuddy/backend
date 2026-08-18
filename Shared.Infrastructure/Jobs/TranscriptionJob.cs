@@ -21,7 +21,7 @@ public class TranscriptionJob : ITranscriptionJob
     private readonly ILogger<TranscriptionJob> _logger;
     private readonly IHostEnvironment _hostEnvironment;
     private readonly IMessagePublisher _messagePublisher;
-    private readonly ITranscriptionJobRepository _transcriptionJobRepository;
+    private readonly ITranscriptRepository _transcriptRepository;
     private readonly IStreamableTranscriptionExporter _streamableTranscriptionExporter;
     private readonly ITranscriptionService _cloudFlareTranscriptionService;
     private readonly ITranscriptionService _groqTranscriptionService;
@@ -30,7 +30,7 @@ public class TranscriptionJob : ITranscriptionJob
     public TranscriptionJob(
         IStreamingTranscriptionService transcriptionService, IAudioJobStorageService audioJobStorageService,
         ILogger<TranscriptionJob> logger, IHostEnvironment hostEnvironment, IMessagePublisher messagePublisher,
-        ITranscriptionJobRepository transcriptionJobRepository, IOptions<WorkerOptions> workerOptions,
+        ITranscriptRepository transcriptRepository, IOptions<WorkerOptions> workerOptions,
         IStreamableTranscriptionExporter streamableTranscriptionExporter,
         [FromKeyedServices(TranscriptionProvider.Cloudflare)]
         ITranscriptionService cloudFlareTranscriptionService,
@@ -42,7 +42,7 @@ public class TranscriptionJob : ITranscriptionJob
         _logger = logger;
         _hostEnvironment = hostEnvironment;
         _messagePublisher = messagePublisher;
-        _transcriptionJobRepository = transcriptionJobRepository;
+        _transcriptRepository = transcriptRepository;
         _streamableTranscriptionExporter = streamableTranscriptionExporter;
         _cloudFlareTranscriptionService = cloudFlareTranscriptionService;
         _groqTranscriptionService = groqTranscriptionService;
@@ -68,7 +68,7 @@ public class TranscriptionJob : ITranscriptionJob
 
             await DownloadAndSaveFileAsync(toProcessFilePath, fileKey, cancellationToken);
 
-            await _transcriptionJobRepository.UpdateStatusAsync(fileKey, null,
+            await _transcriptRepository.UpdateStatusAsync(fileKey, null,
                 TranscriptionJobStatus.Processing, new Guid(userId));
 
             switch (_workerOptions.TranscriptionProvider)
@@ -105,7 +105,7 @@ public class TranscriptionJob : ITranscriptionJob
                 outputObjectKey = uploadResult;
             }
 
-            await _transcriptionJobRepository.UpdateStatusAsync(fileKey, outputObjectKey,
+            await _transcriptRepository.UpdateStatusAsync(fileKey, outputObjectKey,
                 TranscriptionJobStatus.Completed, new Guid(userId));
             await _audioJobStorageService.DeleteAudioAsync(fileKey, cancellationToken);
 
@@ -151,7 +151,7 @@ public class TranscriptionJob : ITranscriptionJob
                 await s3Stream.CopyToAsync(fileStream, cancellationToken);
             }
 
-            await _transcriptionJobRepository.UpdateStatusAsync(fileKey, null,
+            await _transcriptRepository.UpdateStatusAsync(fileKey, null,
                 TranscriptionJobStatus.Processing, new Guid(userId));
 
             if (_hostEnvironment.IsDevelopment())
@@ -211,7 +211,7 @@ public class TranscriptionJob : ITranscriptionJob
             }
 
             _logger.LogInformation("Updating processed object key: {FileKey}", outputObjectKey);
-            await _transcriptionJobRepository.UpdateProcessedObjectKeyAsync(fileKey, outputObjectKey,
+            await _transcriptRepository.UpdateProcessedObjectKeyAsync(fileKey, outputObjectKey,
                 TranscriptionJobStatus.Completed);
             await _audioJobStorageService.DeleteAudioAsync(fileKey, cancellationToken);
 

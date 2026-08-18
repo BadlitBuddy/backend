@@ -1,5 +1,4 @@
 using Api.Domain.Entities;
-using Microsoft.EntityFrameworkCore;
 
 namespace Api.Application.Common.Interfaces;
 
@@ -10,7 +9,7 @@ public interface IApplicationDbContext
     DbSet<Organization> Organizations { get; }
     DbSet<OrganizationSubscription> OrganizationSubscriptions { get; }
     DbSet<SubscriptionPlan> SubscriptionPlans { get; }
-    DbSet<TranscriptionJob> TranscriptionJobs { get; }
+    DbSet<Transcript> Transcripts { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

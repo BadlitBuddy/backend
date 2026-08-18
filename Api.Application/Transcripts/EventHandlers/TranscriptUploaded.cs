@@ -3,15 +3,15 @@ using Microsoft.Extensions.Logging;
 using Shared.Abstractions.Jobs;
 using Shared.Abstractions.Services;
 
-namespace Api.Application.TranscriptionJobs.EventHandlers;
+namespace Api.Application.Transcripts.EventHandlers;
 
-public class TranscriptionJobUploaded : INotificationHandler<TranscriptionJobUploadedEvent>
+public class TranscriptUploaded : INotificationHandler<TranscriptUploadedEvent>
 {
-    private readonly ILogger<TranscriptionJobUploaded> _logger;
+    private readonly ILogger<TranscriptUploaded> _logger;
     private readonly IAudioJobStorageService _audioJobStorageService;
     private readonly ITranscriptionJobScheduler _transcriptionJobScheduler;
 
-    public TranscriptionJobUploaded(ILogger<TranscriptionJobUploaded> logger,
+    public TranscriptUploaded(ILogger<TranscriptUploaded> logger,
         IAudioJobStorageService audioJobStorageService, ITranscriptionJobScheduler transcriptionJobScheduler)
     {
         _logger = logger;
@@ -19,7 +19,7 @@ public class TranscriptionJobUploaded : INotificationHandler<TranscriptionJobUpl
         _transcriptionJobScheduler = transcriptionJobScheduler;
     }
 
-    public async Task Handle(TranscriptionJobUploadedEvent notification, CancellationToken cancellationToken)
+    public async Task Handle(TranscriptUploadedEvent notification, CancellationToken cancellationToken)
     {
         if (!await _audioJobStorageService.IsStorageAvailableAsync(cancellationToken))
         {
@@ -30,11 +30,11 @@ public class TranscriptionJobUploaded : INotificationHandler<TranscriptionJobUpl
         try
         {
             var result = _transcriptionJobScheduler.EnqueueTranscriptionJob(
-                notification.TranscriptionJob.UnprocessedObjectKey,
+                notification.Transcript.UnprocessedObjectKey,
                 cancellationToken);
             _logger.LogInformation(
                 "Job {Result} is being processed with object key:  {TranscriptionJobUnprocessedObjectKey}", result,
-                notification.TranscriptionJob.UnprocessedObjectKey);
+                notification.Transcript.UnprocessedObjectKey);
         }
         catch (OperationCanceledException)
         {

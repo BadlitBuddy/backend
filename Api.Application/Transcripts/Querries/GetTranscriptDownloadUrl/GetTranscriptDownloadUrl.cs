@@ -29,7 +29,7 @@ public class
     public async Task<Result<TranscriptDownloadUrlDto>> Handle(GetTranscriptDownloadUrlQuery request,
         CancellationToken cancellationToken)
     {
-        var transcript = await _dbContext.TranscriptionJobs
+        var transcript = await _dbContext.Transcripts
             .FirstOrDefaultAsync(
                 tj => tj.PublicId == request.Id &&
                       tj.JobStatus == TranscriptionJobStatus.Completed &&

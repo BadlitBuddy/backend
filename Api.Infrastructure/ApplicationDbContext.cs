@@ -17,7 +17,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<Organization> Organizations => Set<Organization>();
     public DbSet<OrganizationSubscription> OrganizationSubscriptions => Set<OrganizationSubscription>();
     public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
-    public DbSet<TranscriptionJob> TranscriptionJobs => Set<TranscriptionJob>();
+    public DbSet<Transcript> Transcripts => Set<Transcript>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
