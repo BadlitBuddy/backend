@@ -7,16 +7,16 @@ using Shared.Infrastructure.Data;
 
 namespace Shared.Infrastructure.Repositories;
 
-public class TranscriptionJobRepository : ITranscriptionJobRepository
+public class TranscriptRepository : ITranscriptRepository
 {
     private readonly DapperDbContext _dbContext;
 
-    public TranscriptionJobRepository(DapperDbContext dbContext)
+    public TranscriptRepository(DapperDbContext dbContext)
     {
         _dbContext = dbContext;
     }
 
-    public async Task<TranscriptionJob?> GetByUnprocessedObjectKeyAsync(string unprocessedObjectKey, Guid userId)
+    public async Task<Transcript?> GetByUnprocessedObjectKeyAsync(string unprocessedObjectKey, Guid userId)
     {
         const string sql = @"
             SELECT * FROM public.""TranscriptionJobs""
@@ -25,14 +25,14 @@ public class TranscriptionJobRepository : ITranscriptionJobRepository
 
         using var connection = _dbContext.CreateConnection();
 
-        return await connection.QuerySingleOrDefaultAsync<TranscriptionJob>(sql, new
+        return await connection.QuerySingleOrDefaultAsync<Transcript>(sql, new
         {
             UnprocessedObjectKey = unprocessedObjectKey,
             UserId = userId
         });
     }
 
-    public async Task<TranscriptionJobDto?> UpdateStatusAsync(
+    public async Task<TranscriptDto?> UpdateStatusAsync(
         string unprocessedObjectKey,
         string? processedObjectKey,
         TranscriptionJobStatus status,
@@ -56,7 +56,7 @@ public class TranscriptionJobRepository : ITranscriptionJobRepository
 
         using var connection = _dbContext.CreateConnection();
 
-        var result = await connection.QuerySingleOrDefaultAsync<TranscriptionJobDto>(
+        var result = await connection.QuerySingleOrDefaultAsync<TranscriptDto>(
             sql,
             new
             {
@@ -69,7 +69,7 @@ public class TranscriptionJobRepository : ITranscriptionJobRepository
         return result;
     }
 
-    public async Task<TranscriptionJobSummaryDto?> UpdateProcessedObjectKeyAsync(string unprocessedObjectKey,
+    public async Task<TranscriptSummaryDto?> UpdateProcessedObjectKeyAsync(string unprocessedObjectKey,
         string processedObjectKey,
         TranscriptionJobStatus status)
     {
@@ -88,7 +88,7 @@ public class TranscriptionJobRepository : ITranscriptionJobRepository
 
         using var connection = _dbContext.CreateConnection();
 
-        var result = await connection.QuerySingleOrDefaultAsync<TranscriptionJobSummaryDto>(
+        var result = await connection.QuerySingleOrDefaultAsync<TranscriptSummaryDto>(
             sql,
             new
             {

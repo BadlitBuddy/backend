@@ -77,33 +77,33 @@ public class TranscribeFileHandler : IRequestHandler<TranscribeFileCommand, Resu
         };
     }
 
-    private async Task<TranscriptionJob> TranscribeFree(TranscribeFileCommand request,
+    private async Task<Transcript> TranscribeFree(TranscribeFileCommand request,
         CancellationToken cancellationToken)
     {
-        TranscriptionJob transcriptionJob;
+        Transcript transcript;
         if (!string.IsNullOrWhiteSpace(request.Id))
         {
             var existingTranscriptionJob = await
-                _dbContext.TranscriptionJobs.SingleOrDefaultAsync(tj => tj.PublicId == request.Id,
+                _dbContext.Transcripts.SingleOrDefaultAsync(tj => tj.PublicId == request.Id,
                     cancellationToken: cancellationToken);
             if (existingTranscriptionJob == null)
             {
                 throw new NotFoundException("Transcript", "Transcript with provided Id cannot be fond");
             }
 
-            transcriptionJob = existingTranscriptionJob;
+            transcript = existingTranscriptionJob;
         }
         else
         {
-            transcriptionJob = new TranscriptionJob
+            transcript = new Transcript
             {
                 UserId = Guid.Parse(_currentUserService.Id!),
                 UnprocessedObjectKey = request.UnprocessedObjectKey
             };
-            _dbContext.TranscriptionJobs.Add(transcriptionJob);
+            _dbContext.Transcripts.Add(transcript);
         }
 
-        transcriptionJob.MarkAsProcessing();
+        transcript.MarkAsProcessing();
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         try
@@ -113,61 +113,61 @@ public class TranscribeFileHandler : IRequestHandler<TranscribeFileCommand, Resu
                 cancellationToken);
 
             _logger.LogInformation("Transcription Job with key {ObjectKey}, has enqueued using Default Model",
-                transcriptionJob.UnprocessedObjectKey);
+                transcript.UnprocessedObjectKey);
         }
         catch (OperationCanceledException)
         {
-            transcriptionJob.MarkAsCanceled();
+            transcript.MarkAsCanceled();
             await _dbContext.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("Transcription Job with key {ObjectKey}, has been cancelled",
-                transcriptionJob.UnprocessedObjectKey);
+                transcript.UnprocessedObjectKey);
         }
         catch (Exception ex)
         {
-            transcriptionJob.MarkAsFailed();
+            transcript.MarkAsFailed();
             await _dbContext.SaveChangesAsync(cancellationToken)
                 ;
             _logger.LogError(
                 "An unhandled error occurred while enqueuing Transcription Job with key {ObjectKey} with message {Message}",
-                transcriptionJob.UnprocessedObjectKey, ex.Message);
+                transcript.UnprocessedObjectKey, ex.Message);
 
             throw new InvalidOperationException(
-                $"Failed to enqueue transcription job for key '{transcriptionJob.UnprocessedObjectKey}'.",
+                $"Failed to enqueue transcription job for key '{transcript.UnprocessedObjectKey}'.",
                 ex);
         }
 
-        return transcriptionJob;
+        return transcript;
     }
 
-    private async Task<TranscriptionJob> TranscribePublic(TranscribeFileCommand request,
+    private async Task<Transcript> TranscribePublic(TranscribeFileCommand request,
         CancellationToken cancellationToken)
     {
-        TranscriptionJob transcriptionJob;
+        Transcript transcript;
         if (!string.IsNullOrWhiteSpace(request.Id))
         {
             var existingTranscriptionJob = await
-                _dbContext.TranscriptionJobs.SingleOrDefaultAsync(tj => tj.PublicId == request.Id,
+                _dbContext.Transcripts.SingleOrDefaultAsync(tj => tj.PublicId == request.Id,
                     cancellationToken: cancellationToken);
             if (existingTranscriptionJob == null)
             {
                 throw new NotFoundException("Transcript", "Transcript with provided Id cannot be fond");
             }
 
-            transcriptionJob = existingTranscriptionJob;
+            transcript = existingTranscriptionJob;
         }
         else
         {
-            transcriptionJob = new TranscriptionJob
+            transcript = new Transcript
             {
                 User = null,
                 UserId = null,
                 UnprocessedObjectKey = request.UnprocessedObjectKey
             };
-            _dbContext.TranscriptionJobs.Add(transcriptionJob);
+            _dbContext.Transcripts.Add(transcript);
         }
 
-        transcriptionJob.MarkAsProcessing();
+        transcript.MarkAsProcessing();
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         try
@@ -177,30 +177,30 @@ public class TranscribeFileHandler : IRequestHandler<TranscribeFileCommand, Resu
                 cancellationToken);
 
             _logger.LogInformation("Transcription Job with key {ObjectKey}, has enqueued using whisper-tiny-en model",
-                transcriptionJob.UnprocessedObjectKey);
+                transcript.UnprocessedObjectKey);
         }
         catch (OperationCanceledException)
         {
-            transcriptionJob.MarkAsCanceled();
+            transcript.MarkAsCanceled();
             await _dbContext.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("Transcription Job with key {ObjectKey}, has been cancelled",
-                transcriptionJob.UnprocessedObjectKey);
+                transcript.UnprocessedObjectKey);
         }
         catch (Exception ex)
         {
-            transcriptionJob.MarkAsFailed();
+            transcript.MarkAsFailed();
             await _dbContext.SaveChangesAsync(cancellationToken);
 
             _logger.LogError(
                 "An unhandled error occurred while enqueuing Transcription Job with key {ObjectKey} with message {Message}",
-                transcriptionJob.UnprocessedObjectKey, ex.Message);
+                transcript.UnprocessedObjectKey, ex.Message);
 
             throw new InvalidOperationException(
-                $"Failed to enqueue transcription job for key '{transcriptionJob.UnprocessedObjectKey}'.",
+                $"Failed to enqueue transcription job for key '{transcript.UnprocessedObjectKey}'.",
                 ex);
         }
 
-        return transcriptionJob;
+        return transcript;
     }
 }

@@ -89,7 +89,7 @@ public class Transcripts : IEndpointGroup
         [FromRoute] string id, IMessageSubscriber messageSubscriber,
         IApplicationDbContext dbContext, CancellationToken cancellationToken)
     {
-        var transcription = await dbContext.TranscriptionJobs
+        var transcription = await dbContext.Transcripts
             .FirstOrDefaultAsync(tj =>
                 tj.JobStatus != TranscriptionJobStatus.Completed &&
                 tj.PublicId == id, cancellationToken: cancellationToken);
