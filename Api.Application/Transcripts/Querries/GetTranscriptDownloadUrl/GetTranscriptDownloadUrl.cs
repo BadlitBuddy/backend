@@ -1,3 +1,4 @@
+using Api.Application.Common.Enums;
 using Api.Application.Common.Interfaces;
 using Api.Application.Transcripts.Dtos;
 using Api.Domain.Enums;
@@ -15,12 +16,14 @@ public class
 {
     private readonly IApplicationDbContext _dbContext;
     private readonly IAudioJobStorageService _audioJobStorageService;
+    private readonly IUser _currentUserService;
 
     public GetTranscriptDownloadUrlHandler(IApplicationDbContext dbContext,
-        IAudioJobStorageService audioJobStorageService)
+        IAudioJobStorageService audioJobStorageService, IUser currentUserService)
     {
         _dbContext = dbContext;
         _audioJobStorageService = audioJobStorageService;
+        _currentUserService = currentUserService;
     }
 
     public async Task<Result<TranscriptDownloadUrlDto>> Handle(GetTranscriptDownloadUrlQuery request,
@@ -46,8 +49,16 @@ public class
             ]);
         }
 
+        DateTime expiry = _currentUserService.UserTier switch
+        {
+            UserTier.Free => DateTime.UtcNow.AddHours(1),
+            UserTier.Public => DateTime.UtcNow.AddMinutes(10),
+            _ => DateTime.UtcNow.AddMinutes(30)
+        };
+
         var downloadData =
-            await _audioJobStorageService.CreateDownloadUrlAsync(transcript.ProcessedObjectKey, cancellationToken);
+            await _audioJobStorageService.CreateDownloadUrlAsync(transcript.ProcessedObjectKey, expiry,
+                cancellationToken);
 
         return Result<TranscriptDownloadUrlDto>.Success(transcript.ToDownloadUrlDto(downloadData.uri.AbsoluteUri,
             downloadData.expiry));

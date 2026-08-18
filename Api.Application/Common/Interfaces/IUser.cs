@@ -1,3 +1,5 @@
+using Api.Application.Common.Enums;
+
 namespace Api.Application.Common.Interfaces;
 
 public interface IUser
@@ -8,4 +10,5 @@ public interface IUser
     string? Email { get; }
     List<string>? Roles { get; }
     bool IsAuthenticated { get; }
+    UserTier UserTier { get; }
 }

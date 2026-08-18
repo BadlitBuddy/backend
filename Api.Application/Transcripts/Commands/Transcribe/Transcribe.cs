@@ -1,3 +1,4 @@
+using Api.Application.Common.Enums;
 using Api.Application.Common.Interfaces;
 using Api.Domain.Entities;
 using Api.Domain.Enums;
@@ -11,12 +12,6 @@ public record TranscribedFileResponse(
     string Id,
     TranscriptionJobStatus JobStatus,
     TimeSpan Duration);
-
-public enum UserTier
-{
-    Public,
-    Free
-}
 
 public class TranscribeFileCommand : IRequest<Result<TranscribedFileResponse>>
 {

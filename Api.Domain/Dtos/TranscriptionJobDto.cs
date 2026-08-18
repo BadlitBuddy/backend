@@ -7,3 +7,10 @@ public class TranscriptionJobDto
     public string? ProcessedObjectKey { get; set; }
     public TranscriptionJobStatus JobStatus { get; set; }
 }
+
+public class TranscriptionJobSummaryDto
+{
+    public required string UnprocessedObjectKey { get; set; }
+    public string? ProcessedObjectKey { get; set; }
+    public TranscriptionJobStatus JobStatus { get; set; }
+}
