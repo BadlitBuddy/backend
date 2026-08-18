@@ -16,7 +16,7 @@ public interface IAudioJobStorageService
     TimeSpan? GetWavDuration(
         FileStream streamInput);
 
-    Task<UploadUrlDto> CreateUploadUrlAsync(string userId, string originalFileName);
+    Task<UploadUrlDto> CreateUploadUrlAsync(string userId, string originalFileName, long fileSize);
     Task<IEnumerable<AudioJobDto>> GetPendingJobsAsync(int batchSize, CancellationToken cancellationToken);
 
     Task<string> UploadTranscriptionAsync(string userId, string originalFileName, Stream audioStream,
@@ -25,6 +25,6 @@ public interface IAudioJobStorageService
     Task<Stream> DownloadAudioAsync(string fileKey, CancellationToken cancellationToken);
     Task<bool> DeleteAudioAsync(string fileKey, CancellationToken cancellationToken);
 
-    Task<(Uri uri, DateTime expiry)> CreateDownloadUrlAsync(string fileKey,
+    Task<(Uri uri, DateTime expiry)> CreateDownloadUrlAsync(string fileKey, DateTime expiry,
         CancellationToken cancellationToken = default);
 }

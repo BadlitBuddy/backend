@@ -69,19 +69,18 @@ public class TranscriptionJobRepository : ITranscriptionJobRepository
         return result;
     }
 
-    public async Task<TranscriptionJobDto?> UpdateDurationAsync(string unprocessedObjectKey, TimeSpan duration,
-        Guid userId)
+    public async Task<TranscriptionJobSummaryDto?> UpdateProcessedObjectKeyAsync(string unprocessedObjectKey,
+        string processedObjectKey,
+        TranscriptionJobStatus status)
     {
         const string sql = @"
                            UPDATE public.""TranscriptionJobs""
                            SET
-                               ""Duration"" = @Duration,
-                               ""LastModifiedBy""      = @UserId,
+                               ""ProcessedObjectKey"" = @ProcessedObjectKey,
+                               ""JobStatus""            = @JobStatus,
                                ""LastModified""         = NOW()
                            WHERE ""UnprocessedObjectKey"" = @UnprocessedObjectKey
-                             AND ""UserId""               = @UserId
                            RETURNING
-                               ""UserId"",
                                ""UnprocessedObjectKey"",
                                ""ProcessedObjectKey"",
                                ""JobStatus""
@@ -89,13 +88,13 @@ public class TranscriptionJobRepository : ITranscriptionJobRepository
 
         using var connection = _dbContext.CreateConnection();
 
-        var result = await connection.QuerySingleOrDefaultAsync<TranscriptionJobDto>(
+        var result = await connection.QuerySingleOrDefaultAsync<TranscriptionJobSummaryDto>(
             sql,
             new
             {
                 UnprocessedObjectKey = unprocessedObjectKey,
-                Duration = duration,
-                UserId = userId
+                ProcessedObjectKey = processedObjectKey,
+                JobStatus = (int)status
             });
 
         return result;
