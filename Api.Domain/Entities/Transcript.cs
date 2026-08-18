@@ -2,8 +2,7 @@ using Api.Domain.Events;
 
 namespace Api.Domain.Entities;
 
-// TODO: rename this entity to 'Transcripts'
-public class TranscriptionJob : BaseAuditableEntity<int>
+public class Transcript : BaseAuditableEntity<int>
 {
     public Guid? UserId { get; set; }
     public User? User { get; set; }
@@ -20,7 +19,7 @@ public class TranscriptionJob : BaseAuditableEntity<int>
         }
 
         JobStatus = TranscriptionJobStatus.Uploaded;
-        AddDomainEvent(new TranscriptionJobUploadedEvent(this));
+        AddDomainEvent(new TranscriptUploadedEvent(this));
     }
 
     public void MarkAsProcessing()
@@ -31,7 +30,7 @@ public class TranscriptionJob : BaseAuditableEntity<int>
         }
 
         JobStatus = TranscriptionJobStatus.Processing;
-        AddDomainEvent(new TranscriptionJobProcessingEvent(this));
+        AddDomainEvent(new TranscriptProcessingEvent(this));
     }
 
     public void MarkAsCompleted()

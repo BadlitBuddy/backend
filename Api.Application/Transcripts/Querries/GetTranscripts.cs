@@ -23,14 +23,14 @@ public class GetTranscriptsHandler : IRequestHandler<GetTranscriptsQuery, Result
     public async Task<Result<PaginatedList<TranscriptDto>>> Handle(GetTranscriptsQuery request,
         CancellationToken cancellationToken)
     {
-        var transcriptionJobs = await _dbContext.TranscriptionJobs
+        var transcriptionJobs = await _dbContext.Transcripts
             .Where(tj => tj.UserId == Guid.Parse(_currentUser.Id!))
             .OrderByDescending(tj => tj.Created)
             .Skip((request.Page - 1) * request.Limit)
             .Take(request.Limit)
             .ToListAsync(cancellationToken);
 
-        var totalTranscriptionJobs = await _dbContext.TranscriptionJobs
+        var totalTranscriptionJobs = await _dbContext.Transcripts
             .Where(tj => tj.UserId == Guid.Parse(_currentUser.Id!))
             .CountAsync(cancellationToken: cancellationToken);
 

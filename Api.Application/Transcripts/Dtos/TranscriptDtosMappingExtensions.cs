@@ -5,7 +5,7 @@ namespace Api.Application.Transcripts.Dtos;
 
 public static class TranscriptMappingExtensions
 {
-    public static TranscriptDto ToDto(this TranscriptionJob entity)
+    public static TranscriptDto ToDto(this Transcript entity)
     {
         return new TranscriptDto
         {
@@ -17,7 +17,7 @@ public static class TranscriptMappingExtensions
         };
     }
 
-    public static TranscriptDownloadUrlDto ToDownloadUrlDto(this TranscriptionJob entity, string downloadUrl,
+    public static TranscriptDownloadUrlDto ToDownloadUrlDto(this Transcript entity, string downloadUrl,
         DateTime expiry)
     {
         var fileName = StoragePathBuilder.ExtractUnprocessedFileKeyParts(entity.UnprocessedObjectKey).originalName;

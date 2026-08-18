@@ -1,8 +1,8 @@
 namespace Api.Infrastructure.Data.Configurations;
 
-public class TranscriptionJobConfiguration : BaseAuditableEntityConfiguration<TranscriptionJob, int>
+public class TranscriptConfiguration : BaseAuditableEntityConfiguration<Transcript, int>
 {
-    public override void Configure(EntityTypeBuilder<TranscriptionJob> builder)
+    public override void Configure(EntityTypeBuilder<Transcript> builder)
     {
         base.Configure(builder);
 

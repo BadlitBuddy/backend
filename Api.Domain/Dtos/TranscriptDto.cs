@@ -1,6 +1,6 @@
 namespace Api.Domain.Dtos;
 
-public class TranscriptionJobDto
+public class TranscriptDto
 {
     public Guid UserId { get; set; }
     public required string UnprocessedObjectKey { get; set; }
@@ -8,7 +8,7 @@ public class TranscriptionJobDto
     public TranscriptionJobStatus JobStatus { get; set; }
 }
 
-public class TranscriptionJobSummaryDto
+public class TranscriptSummaryDto
 {
     public required string UnprocessedObjectKey { get; set; }
     public string? ProcessedObjectKey { get; set; }
