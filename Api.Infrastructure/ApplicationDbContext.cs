@@ -11,7 +11,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
     {
     }
-    // TODO: Add query filters
+
     public DbSet<User> DomainUsers => Set<User>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Organization> Organizations => Set<Organization>();
@@ -30,6 +30,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             .WithOne()
             .HasForeignKey<ApplicationUser>(a => a.Id)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<User>().HasQueryFilter(u => u.IsActive);
+        modelBuilder.Entity<RefreshToken>().HasQueryFilter(u => u.IsActive);
+        modelBuilder.Entity<Organization>().HasQueryFilter(u => u.IsActive);
+        modelBuilder.Entity<OrganizationSubscription>().HasQueryFilter(u => u.IsActive);
+        modelBuilder.Entity<SubscriptionPlan>().HasQueryFilter(u => u.IsActive);
+        modelBuilder.Entity<Transcript>().HasQueryFilter(u => u.IsActive);
 
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
     }
