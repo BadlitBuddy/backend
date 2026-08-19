@@ -30,7 +30,8 @@ public class GroqWhisperTranscriptionService : ITranscriptionService
     private async Task<TranscriptionResult> TranscribeViaUriAsync(Uri uri,
         CancellationToken cancellationToken)
     {
-        var result = await _groqWhisperClient.TranscribeWhisperV3TurboAsync(uri, cancellationToken);
+        var result =
+            await _groqWhisperClient.TranscribeAsync(uri, GroqWhisperModels.WhisperV3LargeTurbo, cancellationToken);
         return GroqMapper.ToResult(result);
     }
 }
