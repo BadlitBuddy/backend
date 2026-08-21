@@ -7,6 +7,8 @@ using Shared.Abstractions.Services;
 using Shared.Contracts.Enums;
 using Shared.Infrastructure.Helpers;
 
+// using JsonTypeInfoResolver = Shared.Infrastructure.Helpers.JsonTypeInfoResolver;
+
 namespace Shared.Infrastructure.Services;
 
 public class TranscriptionExporter : ITranscriptionExporter
@@ -22,23 +24,9 @@ public class TranscriptionExporter : ITranscriptionExporter
         },
         TypeInfoResolver = new DefaultJsonTypeInfoResolver
         {
-            Modifiers = { IgnoreProviderModelId }
+            Modifiers = { JsonTypeInfoResolvers.IgnoreProviderModelId }
         }
     };
-
-    private static void IgnoreProviderModelId(JsonTypeInfo typeInfo)
-    {
-        if (typeInfo.Type != typeof(TranscriptionResult))
-        {
-            return;
-        }
-
-        var property = typeInfo.Properties.FirstOrDefault(p => p.Name == nameof(TranscriptionResult.ProviderModelId));
-        if (property is not null)
-        {
-            typeInfo.Properties.Remove(property);
-        }
-    }
 
     public string Export(TranscriptionResult result, TranscriptionExportFormat format) => format switch
     {
