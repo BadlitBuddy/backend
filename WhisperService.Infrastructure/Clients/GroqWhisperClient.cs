@@ -40,10 +40,17 @@ public class GroqWhisperClient
                 $"File '{fileInfo.Name}' ({fileInfo.Length} bytes) exceeds Groq's {MaxFileSizeBytes} byte limit.");
         }
 
-        if (fileInfo.Extension != ".flac")
+        if (fileInfo.Extension != ".flac" || fileInfo.Extension != ".wav")
         {
-            throw new InvalidOperationException("Only flac files are  supported.");
+            throw new InvalidOperationException("Only flac/wav files are  supported.");
         }
+
+        MediaTypeHeaderValue contentType = fileInfo.Extension switch
+        {
+            ".wav" => new MediaTypeHeaderValue("audio/wav"),
+            ".flac" => new MediaTypeHeaderValue("audio/flac"),
+            _ => new MediaTypeHeaderValue("audio/wav")
+        };
 
         var fileName = fileInfo.FullName;
         if (string.IsNullOrWhiteSpace(fileName))
@@ -56,7 +63,7 @@ public class GroqWhisperClient
             content =>
             {
                 var fileContent = new StreamContent(fileStream);
-                fileContent.Headers.ContentType = new MediaTypeHeaderValue("audio/x-flac");
+                fileContent.Headers.ContentType = contentType;
                 content.Add(fileContent, "file", fileName);
             },
             model,
