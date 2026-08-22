@@ -40,9 +40,9 @@ public class GroqWhisperClient
                 $"File '{fileInfo.Name}' ({fileInfo.Length} bytes) exceeds Groq's {MaxFileSizeBytes} byte limit.");
         }
 
-        if (fileInfo.Extension != ".flac" || fileInfo.Extension != ".wav")
+        if (fileInfo.Extension is not (".flac" or ".wav"))
         {
-            throw new InvalidOperationException("Only flac/wav files are  supported.");
+            throw new InvalidOperationException("Only flac/wav files are supported.");
         }
 
         MediaTypeHeaderValue contentType = fileInfo.Extension switch
