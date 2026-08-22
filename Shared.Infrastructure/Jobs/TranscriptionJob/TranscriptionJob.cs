@@ -55,6 +55,9 @@ public class TranscriptionJob : ITranscriptionJob
 
     public async Task TranscribeFileAsync(string fileKey, CancellationToken cancellationToken)
     {
+        await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
+            new TranscriptionProcessMessage(JobStatus.Processing, fileKey, null));
+
         var isFileValid = await IsFileValid(fileKey, cancellationToken);
         if (!isFileValid)
         {
@@ -133,6 +136,9 @@ public class TranscriptionJob : ITranscriptionJob
     [Queue(HangfireQueueConstants.WhisperTinyEn)]
     public async Task TranscribeFileWithWhisperTinyEnAsync(string fileKey, CancellationToken cancellationToken)
     {
+        await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
+            new TranscriptionProcessMessage(JobStatus.Processing, fileKey, null));
+
         var isFileValid = await IsFileValid(fileKey, cancellationToken);
         if (!isFileValid)
         {
