@@ -92,6 +92,7 @@ builder.Services.AddSingleton<ITranscriptionExporter, TranscriptionExporter>();
 builder.Services.AddSingleton<IStreamableTranscriptionExporter, StreamableTranscriptionExporter>();
 
 builder.Services.AddScoped<ITranscriptionJob, TranscriptionJob>();
+builder.Services.AddTranscriptionJobServices();
 
 var host = builder.Build();
 host.Run();
