@@ -22,6 +22,8 @@ public class GroqWhisperTranscriptionService : ITranscriptionService
         {
             TranscriptionSource.Url pathSource =>
                 await TranscribeViaUriAsync(pathSource.Uri, cancellationToken),
+            TranscriptionSource.FilePath pathSource =>
+                await TranscribeViaFilePathAsync(pathSource.FileInfo, cancellationToken),
             _ => throw new NotSupportedException(
                 $"Audio source {source.GetType().Name} is not supported by this provider.")
         };
@@ -30,7 +32,17 @@ public class GroqWhisperTranscriptionService : ITranscriptionService
     private async Task<TranscriptionResult> TranscribeViaUriAsync(Uri uri,
         CancellationToken cancellationToken)
     {
-        var result = await _groqWhisperClient.TranscribeWhisperV3TurboAsync(uri, cancellationToken);
+        var result =
+            await _groqWhisperClient.TranscribeAsync(uri, GroqWhisperModels.WhisperV3LargeTurbo, cancellationToken);
+        return GroqMapper.ToResult(result);
+    }
+
+    private async Task<TranscriptionResult> TranscribeViaFilePathAsync(FileInfo fileInfo,
+        CancellationToken cancellationToken)
+    {
+        var result =
+            await _groqWhisperClient.TranscribeAsync(fileInfo, GroqWhisperModels.WhisperV3Large,
+                cancellationToken);
         return GroqMapper.ToResult(result);
     }
 }

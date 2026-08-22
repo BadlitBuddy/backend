@@ -9,7 +9,7 @@ using Shared.Abstractions.Services;
 using Shared.Contracts.Enums;
 using Shared.Infrastructure;
 using Shared.Infrastructure.Configuration;
-using Shared.Infrastructure.Jobs;
+using Shared.Infrastructure.Jobs.TranscriptionJob;
 using Shared.Infrastructure.Services;
 using TinyHealthCheck;
 using WhisperService.WorkerService.Configuration;
@@ -92,6 +92,7 @@ builder.Services.AddSingleton<ITranscriptionExporter, TranscriptionExporter>();
 builder.Services.AddSingleton<IStreamableTranscriptionExporter, StreamableTranscriptionExporter>();
 
 builder.Services.AddScoped<ITranscriptionJob, TranscriptionJob>();
+builder.Services.AddTranscriptionJobServices();
 
 var host = builder.Build();
 host.Run();
