@@ -13,7 +13,7 @@ using Shared.Infrastructure.Constants;
 using Shared.Infrastructure.Services;
 using TranscriptionJobStatus = Api.Domain.Enums.TranscriptionJobStatus;
 
-namespace Shared.Infrastructure.Jobs;
+namespace Shared.Infrastructure.Jobs.TranscriptionJob;
 
 public class TranscriptionJob : ITranscriptionJob
 {

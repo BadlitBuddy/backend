@@ -9,7 +9,7 @@ using Shared.Abstractions.Services;
 using Shared.Contracts.Enums;
 using Shared.Infrastructure;
 using Shared.Infrastructure.Configuration;
-using Shared.Infrastructure.Jobs;
+using Shared.Infrastructure.Jobs.TranscriptionJob;
 using Shared.Infrastructure.Services;
 using TinyHealthCheck;
 using WhisperService.WorkerService.Configuration;
