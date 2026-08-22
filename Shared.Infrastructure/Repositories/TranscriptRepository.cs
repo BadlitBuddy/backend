@@ -19,7 +19,7 @@ public class TranscriptRepository : ITranscriptRepository
     public async Task<Transcript?> GetByUnprocessedObjectKeyAsync(string unprocessedObjectKey, Guid userId)
     {
         const string sql = @"
-            SELECT * FROM public.""TranscriptionJobs""
+            SELECT * FROM public.""Transcripts""
             WHERE ""UnprocessedObjectKey"" = @UnprocessedObjectKey 
             AND ""UserId"" = @UserId";
 
@@ -39,7 +39,7 @@ public class TranscriptRepository : ITranscriptRepository
         Guid userId)
     {
         const string sql = @"
-                           UPDATE public.""TranscriptionJobs""
+                           UPDATE public.""Transcripts""
                            SET
                                ""ProcessedObjectKey"" = @ProcessedObjectKey,
                                ""JobStatus""            = @JobStatus,
@@ -74,7 +74,7 @@ public class TranscriptRepository : ITranscriptRepository
         TranscriptionJobStatus status)
     {
         const string sql = @"
-                           UPDATE public.""TranscriptionJobs""
+                           UPDATE public.""Transcripts""
                            SET
                                ""ProcessedObjectKey"" = @ProcessedObjectKey,
                                ""JobStatus""            = @JobStatus,

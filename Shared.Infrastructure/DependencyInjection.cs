@@ -11,6 +11,7 @@ using Shared.Abstractions.Repositories;
 using Shared.Abstractions.Services;
 using Shared.Infrastructure.Data;
 using Shared.Infrastructure.Jobs;
+using Shared.Infrastructure.Jobs.TranscriptionJob.TranscriptionProviders;
 using Shared.Infrastructure.Repositories;
 using Shared.Infrastructure.Services;
 using StackExchange.Redis;
@@ -122,6 +123,15 @@ public static class DependencyInjection
     public static IServiceCollection AddDataRepositories(this IServiceCollection services)
     {
         services.AddScoped<ITranscriptRepository, TranscriptRepository>();
+
+        return services;
+    }
+
+    public static IServiceCollection AddTranscriptionJobServices(this IServiceCollection services)
+    {
+        services.AddScoped<CloudFlareTranscriber>();
+        services.AddScoped<GroqTranscriber>();
+        services.AddScoped<WhisperNetTranscriber>();
 
         return services;
     }
