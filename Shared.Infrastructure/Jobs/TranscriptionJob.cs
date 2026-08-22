@@ -157,11 +157,7 @@ public class TranscriptionJob : ITranscriptionJob
         {
             _logger.LogInformation("Starting Whisper transcription for: {FileKey}", fileKey);
 
-            {
-                await using var s3Stream = await _audioJobStorageService.DownloadAudioAsync(fileKey, cancellationToken);
-                await using var fileStream = File.Create(toProcessFilePath);
-                await s3Stream.CopyToAsync(fileStream, cancellationToken);
-            }
+            var toProcessFileInfo = await DownloadAndSaveFileAsync(toProcessFilePath, fileKey, cancellationToken);
 
             await _transcriptRepository.UpdateStatusAsync(fileKey, null,
                 TranscriptionJobStatus.Processing, new Guid(userId));
@@ -174,7 +170,7 @@ public class TranscriptionJob : ITranscriptionJob
             using var progressCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var transcriptionTask =
                 _cloudFlareTranscriptionService.TranscribeAsync(
-                    new TranscriptionSource.FilePath(new FileInfo(toProcessFilePath)),
+                    new TranscriptionSource.FilePath(toProcessFileInfo),
                     TranscriptionModel.WhisperTinyEn,
                     cancellationToken);
             var progressTask = PublishProgressAsync(
