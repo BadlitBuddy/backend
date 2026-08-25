@@ -9,11 +9,12 @@ on:
 
 permissions:
   contents: read
-
+  id-token: write
+  
 concurrency:
   group: deploy-dev-${{ github.ref }}
   cancel-in-progress: true
-
+  
 jobs:
   deploy-dev:
     name: Deploy Services to Cloud Run
@@ -21,21 +22,20 @@ jobs:
     timeout-minutes: 15
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.ref }}
-
       - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
       - name: Deploy API Service to Cloud Run
         run: |
           IMAGE_TAG="dev"
