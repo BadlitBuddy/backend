@@ -50,13 +50,12 @@ jobs:
             --region=${{ secrets.GCP_REGION }} \
             --allow-unauthenticated \
             --cpu-throttling \
-            --no-cpu-boost \
             --min-instances=0 \
             --max-instances=1 \
             --cpu=1 \
             --memory=512Mi \
             --concurrency=50 \
-            --startup-probe=httpGet.path=/health,initialDelaySeconds=5,periodSeconds=10,failureThreshold=3 \
+            --startup-probe=httpGet.path=/health,initialDelaySeconds=30,periodSeconds=10,failureThreshold=3 \
             --liveness-probe=httpGet.path=/alive,periodSeconds=20
 
       - name: Deploy Whisper Service to Cloud Run
