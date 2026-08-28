@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 
-namespace Shared.Infrastructure.Helpers;
+namespace Shared.Common.Helpers;
 
 public class TimeSpanToSecondsJsonConverter : JsonConverter<TimeSpan>
 {
