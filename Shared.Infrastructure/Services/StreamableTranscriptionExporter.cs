@@ -4,8 +4,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using Shared.Abstractions.Services;
+using Shared.Common.Helpers;
 using Shared.Contracts.Enums;
-using Shared.Infrastructure.Helpers;
 
 namespace Shared.Infrastructure.Services;
 
