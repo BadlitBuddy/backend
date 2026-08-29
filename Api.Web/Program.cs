@@ -5,7 +5,9 @@ using Api.Web;
 using Aspire.ServiceDefaults;
 using Hangfire;
 using Scalar.AspNetCore;
+using Shared.Abstractions.Services;
 using Shared.Infrastructure;
+using Shared.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +24,8 @@ builder.Services
     .AddS3Services()
     .AddHangFireStorage()
     .AddRedisSubscriberService();
+
+builder.Services.AddSingleton<ITranscriptionExporter, TranscriptionExporter>();
 
 var app = builder.Build();
 
