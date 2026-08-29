@@ -67,11 +67,13 @@ public class Transcripts : IEndpointGroup
     [EndpointSummary("Get transcript by ID")]
     [EndpointDescription("Retrieves the full details and metadata of a specific transcription record using its unique identifier.")]
     public static async Task<Results<ProblemHttpResult, Ok<GetTranscriptResponse>>> GetTranscript(
-        string id, ISender sender)
+        string id, [FromQuery] bool includeSrtSegments, [FromQuery] bool includeVttSegments, ISender sender)
     {
         var request = new GetTranscriptQuery
         {
-            Id = id
+            Id = id,
+            IncludeSrtSegments = includeSrtSegments,
+            IncludeVttSegments = includeVttSegments
         };
 
         var result = await sender.Send(request);
