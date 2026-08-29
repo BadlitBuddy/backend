@@ -41,6 +41,8 @@ public static class DependencyInjection
             });
         });
 
+        builder.Services.ConfigureHttpJsonOptions(options => { options.SerializerOptions.WriteIndented = false; });
+
         builder.Services.AddRateLimiter(options =>
         {
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>

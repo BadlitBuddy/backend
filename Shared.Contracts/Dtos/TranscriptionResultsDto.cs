@@ -134,3 +134,20 @@ public sealed record TranscriptionToken
     public long? DtwTimestamp { get; init; } // DTW-aligned timestamp (ms)
     public float? VoiceLength { get; init; }
 }
+
+public sealed record SrtSegment
+{
+    public int Index { get; set; }
+    public string StartTime { get; set; } = string.Empty;
+    public string EndTime { get; set; } = string.Empty;
+    public string Text { get; set; } = string.Empty;
+}
+
+public sealed record VttSegment
+{
+    public int Index { get; set; }
+    public required string StartTime { get; set; }
+    public required string EndTime { get; set; }
+    public required string Text { get; set; }
+    public string? Voice { get; set; }
+}
