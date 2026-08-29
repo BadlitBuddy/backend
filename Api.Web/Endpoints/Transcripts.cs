@@ -3,6 +3,7 @@ using Api.Application.Common.Models;
 using Api.Application.Transcripts.Commands.Transcribe;
 using Api.Application.Transcripts.Dtos;
 using Api.Application.Transcripts.Querries;
+using Api.Application.Transcripts.Querries.GetTranscript;
 using Api.Application.Transcripts.Querries.GetTranscriptDownloadUrl;
 using Api.Domain.Enums;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -23,6 +24,7 @@ public class Transcripts : IEndpointGroup
         groupBuilder.MapGet(GetTranscripts);
         groupBuilder.MapGet(GetTranscriptDownloadUrl, "{id}/download-url").AllowAnonymous();
         groupBuilder.MapGet(Events, "{id}/events").AllowAnonymous();
+        groupBuilder.MapGet(GetTranscript, "{id}");
     }
 
     [EndpointSummary("Transcribe a file")]
@@ -50,6 +52,28 @@ public class Transcripts : IEndpointGroup
         {
             Limit = limit,
             Page = page
+        };
+
+        var result = await sender.Send(request);
+
+        if (result.IsFailure)
+        {
+            return result.ToProblemResult();
+        }
+
+        return TypedResults.Ok(result.Value);
+    }
+
+    [EndpointSummary("Get transcript by ID")]
+    [EndpointDescription("Retrieves the full details and metadata of a specific transcription record using its unique identifier.")]
+    public static async Task<Results<ProblemHttpResult, Ok<GetTranscriptResponse>>> GetTranscript(
+        string id, [FromQuery] bool includeSrtSegments, [FromQuery] bool includeVttSegments, ISender sender)
+    {
+        var request = new GetTranscriptQuery
+        {
+            Id = id,
+            IncludeSrtSegments = includeSrtSegments,
+            IncludeVttSegments = includeVttSegments
         };
 
         var result = await sender.Send(request);

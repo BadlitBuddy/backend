@@ -39,9 +39,13 @@ public interface ITranscriptionExporter
     /// <summary>Export to SubRip (.srt) subtitle format, built from segment timings.</summary>
     string ToSrt(TranscriptionResult result);
 
+    List<SrtSegment> ToSrtSegments(TranscriptionResult result);
+
     /// <summary>Export to WebVTT (.vtt) format. Uses the provider-supplied VTT blob when present
     /// (e.g. Cloudflare), otherwise builds it from segment timings.</summary>
     string ToVtt(TranscriptionResult result);
+
+    List<VttSegment> ToVttSegments(TranscriptionResult result);
 
     /// <summary>Export to plain text. One line per segment if segments exist, otherwise the raw text.</summary>
     string ToTxt(TranscriptionResult result);

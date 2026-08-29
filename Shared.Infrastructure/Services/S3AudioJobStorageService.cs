@@ -1,5 +1,6 @@
 using Amazon.S3;
 using Amazon.S3.Model;
+using Amazon.S3.Transfer;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NAudio.Wave;
@@ -319,5 +320,21 @@ public class S3AudioJobStorageService : IAudioJobStorageService
 
         string url = await _s3Client.GetPreSignedURLAsync(request);
         return (new Uri(url), expiry);
+    }
+
+    public async Task<FileInfo> DownloadFileAsync(string fileKey, CancellationToken cancellationToken = default)
+    {
+        string tempFilePath = Path.GetTempFileName();
+
+        using var transferUtility = new TransferUtility(_s3Client);
+
+        await transferUtility.DownloadAsync(
+            tempFilePath,
+            _options.Value.BucketName,
+            fileKey,
+            cancellationToken
+        );
+
+        return new FileInfo(tempFilePath);
     }
 }

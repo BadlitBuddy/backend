@@ -4,10 +4,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using Shared.Abstractions.Services;
+using Shared.Common.Helpers;
 using Shared.Contracts.Enums;
-using Shared.Infrastructure.Helpers;
-
-// using JsonTypeInfoResolver = Shared.Infrastructure.Helpers.JsonTypeInfoResolver;
 
 namespace Shared.Infrastructure.Services;
 
@@ -69,6 +67,43 @@ public class TranscriptionExporter : ITranscriptionExporter
         return sb.ToString();
     }
 
+    public List<SrtSegment> ToSrtSegments(TranscriptionResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+
+        var segments = result.Segments ?? [];
+
+        if (segments.Count == 0)
+        {
+            if (string.IsNullOrWhiteSpace(result.Text))
+            {
+                return [];
+            }
+
+            var end = result.Duration ?? TimeSpan.Zero;
+            return
+            [
+                new SrtSegment
+                {
+                    Index = 1,
+                    StartTime = FormatSrtTimestamp(TimeSpan.Zero),
+                    EndTime = FormatSrtTimestamp(end),
+                    Text = result.Text.Trim()
+                }
+            ];
+        }
+
+        return segments
+            .Select((segment, index) => new SrtSegment
+            {
+                Index = index + 1,
+                StartTime = FormatSrtTimestamp(segment.Start),
+                EndTime = FormatSrtTimestamp(segment.End),
+                Text = segment.Text.Trim()
+            })
+            .ToList();
+    }
+
     public string ToVtt(TranscriptionResult result)
     {
         ArgumentNullException.ThrowIfNull(result);
@@ -108,6 +143,41 @@ public class TranscriptionExporter : ITranscriptionExporter
         }
 
         return sb.ToString();
+    }
+
+    public List<VttSegment> ToVttSegments(TranscriptionResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        var segments = result.Segments ?? [];
+        if (segments.Count == 0)
+        {
+            if (string.IsNullOrWhiteSpace(result.Text))
+            {
+                return [];
+            }
+
+            var end = result.Duration ?? TimeSpan.Zero;
+            return
+            [
+                new VttSegment
+                {
+                    Index = 1,
+                    StartTime = FormatVttTimestamp(TimeSpan.Zero),
+                    EndTime = FormatVttTimestamp(end),
+                    Text = result.Text.Trim()
+                }
+            ];
+        }
+
+        return segments
+            .Select((segment, index) => new VttSegment
+            {
+                Index = index + 1,
+                StartTime = FormatVttTimestamp(segment.Start),
+                EndTime = FormatVttTimestamp(segment.End),
+                Text = segment.Text.Trim()
+            })
+            .ToList();
     }
 
     public string ToTxt(TranscriptionResult result)

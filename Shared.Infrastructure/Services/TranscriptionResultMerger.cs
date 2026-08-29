@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using Raffinert.FuzzySharp;
-using Shared.Infrastructure.Helpers;
+using Shared.Common.Helpers;
 
 namespace Shared.Infrastructure.Services;
 

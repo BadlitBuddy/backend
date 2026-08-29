@@ -27,4 +27,6 @@ public interface IAudioJobStorageService
 
     Task<(Uri uri, DateTime expiry)> CreateDownloadUrlAsync(string fileKey, DateTime expiry,
         CancellationToken cancellationToken = default);
+
+    Task<FileInfo> DownloadFileAsync(string fileKey, CancellationToken cancellationToken = default);
 }
