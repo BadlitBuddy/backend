@@ -8,6 +8,8 @@ public interface ITranscriptRepository
 {
     Task<Transcript?> GetByUnprocessedObjectKeyAsync(string unprocessedObjectKey, Guid userId);
 
+    Task<Transcript?> GetByIdAsync(int id);
+
     Task<TranscriptDto?> UpdateStatusAsync(string unprocessedObjectKey, string? processedObjectKey,
         TranscriptionJobStatus status, Guid userId);
 
