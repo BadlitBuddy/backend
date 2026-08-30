@@ -1,3 +1,4 @@
+using Api.Domain.Entities;
 using Hangfire;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -53,41 +54,48 @@ public class TranscriptionJob : ITranscriptionJob
         _workerOptions = workerOptions.Value;
     }
 
-    public async Task TranscribeFileAsync(string fileKey, CancellationToken cancellationToken)
+    public async Task TranscribeFileAsync(int transcriptId, Guid userId, int organizationId, CancellationToken cancellationToken)
     {
-        await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
-            new TranscriptionProcessMessage(JobStatus.Processing, fileKey, null));
+        Transcript? transcript = await _transcriptRepository.GetByIdAsync(transcriptId);
+        if (transcript == null)
+        {
+            throw new InvalidOperationException("Could not find the corresponding transcript record to process");
+        }
 
-        var isFileValid = await IsFileValid(fileKey, cancellationToken);
+
+        await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
+            new TranscriptionProcessMessage(JobStatus.Processing, transcript.UnprocessedObjectKey, null));
+
+        var isFileValid = await IsFileValid(transcript.UnprocessedObjectKey, cancellationToken);
         if (!isFileValid)
         {
             throw new InvalidOperationException();
         }
 
-        var (toProcessDir, processedDir) = TranscriptionJobHelpers.CreateWorkingDirs(fileKey);
+        var (toProcessDir, processedDir) = TranscriptionJobHelpers.CreateWorkingDirs(transcript.UnprocessedObjectKey);
         var (toProcessFilePath, processedFilePath) =
-            TranscriptionJobHelpers.CreateWorkingFilePaths(toProcessDir, processedDir, fileKey);
-        var (userId, originalFileName) = StoragePathBuilder.ExtractUnprocessedFileKeyParts(fileKey);
+            TranscriptionJobHelpers.CreateWorkingFilePaths(toProcessDir, processedDir, transcript.UnprocessedObjectKey);
+        var (_, originalFileName) = StoragePathBuilder.ExtractUnprocessedFileKeyParts(transcript.UnprocessedObjectKey);
 
         string? outputObjectKey = null;
         try
         {
-            _logger.LogInformation("Starting Whisper transcription for: {FileKey}", fileKey);
+            _logger.LogInformation("Starting Whisper transcription for: {FileKey}", transcript.UnprocessedObjectKey);
 
-            var toProcessFileInfo = await DownloadAndSaveFileAsync(toProcessFilePath, fileKey, cancellationToken);
+            var toProcessFileInfo = await DownloadAndSaveFileAsync(toProcessFilePath, transcript.UnprocessedObjectKey, cancellationToken);
 
             switch (_workerOptions.TranscriptionProvider)
             {
                 case TranscriptionProvider.WhisperNet:
-                    await _whisperNetTranscriber.Transcribe(toProcessFilePath, processedFilePath, fileKey,
+                    await _whisperNetTranscriber.Transcribe(toProcessFilePath, processedFilePath, transcript.UnprocessedObjectKey,
                         cancellationToken);
                     break;
                 case TranscriptionProvider.Groq:
                     await _groqTranscriber.Transcribe(toProcessFileInfo, processedFilePath, processedDir,
-                        fileKey, cancellationToken);
+                        transcript.UnprocessedObjectKey, cancellationToken);
                     break;
                 case TranscriptionProvider.Cloudflare:
-                    await _cloudFlareTranscriber.Transcribe(toProcessFilePath, processedFilePath, fileKey,
+                    await _cloudFlareTranscriber.Transcribe(toProcessFilePath, processedFilePath, transcript.UnprocessedObjectKey,
                         cancellationToken);
                     break;
                 default:
@@ -104,7 +112,7 @@ public class TranscriptionJob : ITranscriptionJob
             {
                 var originalFileNameJson = Path.ChangeExtension(originalFileName, ".json");
                 var uploadResult = await _audioJobStorageService.UploadTranscriptionAsync(
-                    userId,
+                    userId.ToString(),
                     originalFileNameJson,
                     uploadStream,
                     cancellationToken);
@@ -112,15 +120,15 @@ public class TranscriptionJob : ITranscriptionJob
                 outputObjectKey = uploadResult;
             }
 
-            await _transcriptRepository.UpdateStatusAsync(fileKey, outputObjectKey,
-                TranscriptionJobStatus.Completed, new Guid(userId));
-            await _audioJobStorageService.DeleteAudioAsync(fileKey, cancellationToken);
+            await _transcriptRepository.UpdateStatusAsync(transcript.UnprocessedObjectKey, outputObjectKey,
+                TranscriptionJobStatus.Completed, userId);
+            await _audioJobStorageService.DeleteAudioAsync(transcript.UnprocessedObjectKey, cancellationToken);
 
-            _logger.LogInformation("Finished transcription and cleanup for: {FileKey}", fileKey);
+            _logger.LogInformation("Finished transcription and cleanup for: {FileKey}", transcript.UnprocessedObjectKey);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to process {FileKey}", fileKey);
+            _logger.LogError(ex, "Failed to process {FileKey}", transcript.UnprocessedObjectKey);
             throw;
         }
         finally
@@ -129,7 +137,7 @@ public class TranscriptionJob : ITranscriptionJob
             TranscriptionJobHelpers.CleanDirectory(directory);
 
             await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
-                new TranscriptionProcessMessage(JobStatus.Finished, fileKey, outputObjectKey));
+                new TranscriptionProcessMessage(JobStatus.Finished, transcript.UnprocessedObjectKey, outputObjectKey));
         }
     }
 
