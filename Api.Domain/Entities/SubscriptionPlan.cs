@@ -2,14 +2,14 @@ namespace Api.Domain.Entities;
 
 public class SubscriptionPlan : BaseAuditableEntity<int>
 {
-    public required string Name { get; set; }
-    public required string Description { get; set; }
+    public string Name { get; private set; } = string.Empty;
+    public string Description { get; private set; } = string.Empty;
 
-    public decimal Price { get; set; }
-    public required string Currency { get; set; }
+    public decimal Price { get; private set; }
+    public string Currency { get; private set; } = string.Empty;
 
-    public BillingInterval BillingInterval { get; set; }
-    public SubscriptionType SubscriptionType { get; set; }
+    public BillingInterval BillingInterval { get; private set; }
+    public SubscriptionType SubscriptionType { get; private set; }
 
     public long TranscriptionMinutesLimit { get; private set; }
 
@@ -17,12 +17,13 @@ public class SubscriptionPlan : BaseAuditableEntity<int>
     {
     }
 
-    public SubscriptionPlan(string name, string description, decimal price, BillingInterval billingInterval,
+    public SubscriptionPlan(string name, string description, decimal price, string currency, BillingInterval billingInterval,
         SubscriptionType subscriptionType)
     {
         Name = name;
         Description = description;
         Price = price;
+        Currency = currency;
         BillingInterval = billingInterval;
         SetSubscriptionType(subscriptionType);
     }

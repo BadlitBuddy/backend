@@ -13,6 +13,15 @@ public class SubscriptionUsage : BaseAuditableEntity<int>
     public long MinutesRemaining =>
         Math.Max(0, MinutesLimit - MinutesUsed);
 
+    private SubscriptionUsage()
+    {
+    }
+
+    public SubscriptionUsage(long minutes)
+    {
+        MinutesUsed = minutes;
+    }
+
     public void AddUsage(long minutes)
     {
         if (minutes < 0)

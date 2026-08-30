@@ -17,6 +17,9 @@ public class User : BaseAuditableEntity<Guid>
         FirstName = firstName;
         LastName = lastName;
         HasAcceptedTerms = hasAcceptedTerms;
+
+        var newOrganization = new Organization("Default");
+        Organization = newOrganization;
     }
 
     public int? OrganizationId { get; private set; }
@@ -24,6 +27,6 @@ public class User : BaseAuditableEntity<Guid>
     public required string Email { get; set; }
     public required string FirstName { get; set; }
     public string? LastName { get; private set; }
-    public bool HasAcceptedTerms { get; set; }
+    public bool HasAcceptedTerms { get; private set; }
     public List<Transcript> TranscriptionJobs { get; private set; } = [];
 }
