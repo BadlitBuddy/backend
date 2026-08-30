@@ -22,7 +22,7 @@ public class User : BaseAuditableEntity<Guid>
         Organization = newOrganization;
     }
 
-    public int? OrganizationId { get; private set; }
+    public int OrganizationId { get; private set; }
     public Organization? Organization { get; private set; }
     public required string Email { get; set; }
     public required string FirstName { get; set; }
