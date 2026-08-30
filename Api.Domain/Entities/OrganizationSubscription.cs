@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace Api.Domain.Entities;
 
 public class OrganizationSubscription : BaseAuditableEntity<int>
@@ -14,6 +16,7 @@ public class OrganizationSubscription : BaseAuditableEntity<int>
 
     public DateTimeOffset PlanStart { get; private set; }
     public DateTimeOffset PlanEnd { get; private set; }
+    [NotMapped] public bool IsExpired => DateTimeOffset.UtcNow > PlanEnd;
 
     private OrganizationSubscription()
     {
