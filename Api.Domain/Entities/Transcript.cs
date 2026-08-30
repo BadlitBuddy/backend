@@ -19,7 +19,6 @@ public class Transcript : BaseAuditableEntity<int>
         }
 
         JobStatus = TranscriptionJobStatus.Uploaded;
-        AddDomainEvent(new TranscriptUploadedEvent(this));
     }
 
     public void MarkAsProcessing()
