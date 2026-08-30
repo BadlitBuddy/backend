@@ -7,16 +7,12 @@ public class OrganizationSubscriptionConfigurations : BaseAuditableEntityConfigu
         base.Configure(builder);
 
         builder.HasOne(x => x.Organization)
-            .WithOne(x => x.OrganizationSubscription)
-            .HasForeignKey<OrganizationSubscription>(x => x.OrganizationId)
+            .WithMany(x => x.Subscriptions)
+            .HasForeignKey(x => x.OrganizationId)
             .OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.SubscriptionPlan)
             .WithMany()
             .HasForeignKey(x => x.SubscriptionPlanId)
-            .OnDelete(DeleteBehavior.Restrict);
-        builder.HasMany(x => x.SubscriptionUsages)
-            .WithOne(x => x.OrganizationSubscription)
-            .HasForeignKey(x => x.OrganizationSubscriptionId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

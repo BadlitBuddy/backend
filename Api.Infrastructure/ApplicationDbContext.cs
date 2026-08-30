@@ -17,7 +17,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<Organization> Organizations => Set<Organization>();
     public DbSet<OrganizationSubscription> OrganizationSubscriptions => Set<OrganizationSubscription>();
     public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
-    public DbSet<SubscriptionUsage> SubscriptionUsages => Set<SubscriptionUsage>();
     public DbSet<Transcript> Transcripts => Set<Transcript>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -37,7 +36,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         modelBuilder.Entity<Organization>().HasQueryFilter(u => u.IsActive);
         modelBuilder.Entity<OrganizationSubscription>().HasQueryFilter(u => u.IsActive);
         modelBuilder.Entity<SubscriptionPlan>().HasQueryFilter(u => u.IsActive);
-        modelBuilder.Entity<SubscriptionUsage>().HasQueryFilter(u => u.IsActive);
         modelBuilder.Entity<Transcript>().HasQueryFilter(u => u.IsActive);
 
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());

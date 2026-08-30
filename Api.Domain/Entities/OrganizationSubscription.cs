@@ -11,12 +11,13 @@ public class OrganizationSubscription : BaseAuditableEntity<int>
     public SubscriptionPlan? SubscriptionPlan { get; set; }
 
     public SubscriptionStatus SubscriptionStatus { get; private set; }
-
-    public List<SubscriptionUsage> SubscriptionUsages { get; private set; } = [];
-
     public DateTimeOffset PlanStart { get; private set; }
     public DateTimeOffset PlanEnd { get; private set; }
     [NotMapped] public bool IsExpired => DateTimeOffset.UtcNow > PlanEnd;
+
+    public long MinutesUsed { get; private set; }
+    [NotMapped] public long MinutesLimit => SubscriptionPlan?.TranscriptionMinutesLimit ?? 0;
+    [NotMapped] public long MinutesRemaining => Math.Max(0, MinutesLimit - MinutesUsed);
 
     private OrganizationSubscription()
     {
@@ -27,12 +28,10 @@ public class OrganizationSubscription : BaseAuditableEntity<int>
         SubscriptionStatus = subscriptionStatus;
         PlanStart = planStart;
         PlanEnd = planStart.AddDays(30);
+    }
 
-        var newSubscriptionPlan =
-            new SubscriptionPlan("Default Plan", "Default Plan", 0, "USD", BillingInterval.Monthly, SubscriptionType.Free);
-        SubscriptionPlan = newSubscriptionPlan;
-
-        var newSubscriptionUsage = new SubscriptionUsage(0);
-        SubscriptionUsages.Add(newSubscriptionUsage);
+    public void SetSubscriptionPlan(SubscriptionPlan subscriptionPlan)
+    {
+        SubscriptionPlan = subscriptionPlan;
     }
 }
