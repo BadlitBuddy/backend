@@ -48,12 +48,19 @@ public class TranscribeFileHandler : IRequestHandler<TranscribeFileCommand, Resu
             return Result<TranscribedFileResponse>.Failure(["Provided Object Key does not exist"]);
         }
 
+        var user = await _dbContext.DomainUsers.AsNoTracking()
+            .SingleOrDefaultAsync(u => u.PublicId == _currentUserService.PublicId, cancellationToken: cancellationToken);
+        if (user == null)
+        {
+            return Result<TranscribedFileResponse>.Failure(["There was an issue with transcribing. please try again."]);
+        }
+
         var userTier = ResolveTier();
 
         switch (userTier)
         {
             case UserTier.Free:
-                var freeTranscriptionJob = await TranscribeFree(request, cancellationToken);
+                var freeTranscriptionJob = await TranscribeFree(request, user, cancellationToken);
                 return Result<TranscribedFileResponse>.Success(new TranscribedFileResponse(
                     freeTranscriptionJob.PublicId,
                     freeTranscriptionJob.JobStatus, freeTranscriptionJob.Duration));
@@ -77,7 +84,7 @@ public class TranscribeFileHandler : IRequestHandler<TranscribeFileCommand, Resu
         };
     }
 
-    private async Task<Transcript> TranscribeFree(TranscribeFileCommand request,
+    private async Task<Transcript> TranscribeFree(TranscribeFileCommand request, User user,
         CancellationToken cancellationToken)
     {
         Transcript transcript;
@@ -109,7 +116,7 @@ public class TranscribeFileHandler : IRequestHandler<TranscribeFileCommand, Resu
         try
         {
             _transcriptionJobScheduler.EnqueueTranscriptionJob(
-                request.UnprocessedObjectKey,
+                transcript.Id, user.Id, user.OrganizationId,
                 cancellationToken);
 
             _logger.LogInformation("Transcription Job with key {ObjectKey}, has enqueued using Default Model",
