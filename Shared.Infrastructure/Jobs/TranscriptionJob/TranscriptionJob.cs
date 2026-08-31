@@ -1,4 +1,5 @@
 using Api.Domain.Entities;
+using Api.Domain.Enums;
 using Hangfire;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -23,6 +24,8 @@ public class TranscriptionJob : ITranscriptionJob
     private readonly IHostEnvironment _hostEnvironment;
     private readonly IMessagePublisher _messagePublisher;
     private readonly ITranscriptRepository _transcriptRepository;
+    private readonly IOrganizationRepository _organizationRepository;
+    private readonly IOrganizationSubscriptionRepository _organizationSubscriptionRepository;
     private readonly IStreamableTranscriptionExporter _streamableTranscriptionExporter;
     private readonly ITranscriptionService _cloudFlareTranscriptionService;
     private readonly WorkerOptions _workerOptions;
@@ -38,8 +41,8 @@ public class TranscriptionJob : ITranscriptionJob
         [FromKeyedServices(TranscriptionProvider.Cloudflare)]
         ITranscriptionService cloudFlareTranscriptionService,
         CloudFlareTranscriber cloudFlareTranscriber, GroqTranscriber groqTranscriber,
-        WhisperNetTranscriber whisperNetTranscriber
-    )
+        WhisperNetTranscriber whisperNetTranscriber, IOrganizationSubscriptionRepository organizationSubscriptionRepository,
+        IOrganizationRepository organizationRepository)
     {
         _audioJobStorageService = audioJobStorageService;
         _logger = logger;
@@ -51,6 +54,8 @@ public class TranscriptionJob : ITranscriptionJob
         _cloudFlareTranscriber = cloudFlareTranscriber;
         _groqTranscriber = groqTranscriber;
         _whisperNetTranscriber = whisperNetTranscriber;
+        _organizationSubscriptionRepository = organizationSubscriptionRepository;
+        _organizationRepository = organizationRepository;
         _workerOptions = workerOptions.Value;
     }
 
@@ -62,6 +67,25 @@ public class TranscriptionJob : ITranscriptionJob
             throw new InvalidOperationException("Could not find the corresponding transcript record to process");
         }
 
+        var orgWithSubscriptionDetails = await _organizationRepository.GetWithSubscriptionDetailsByIdAsync(organizationId);
+        if (orgWithSubscriptionDetails == null)
+        {
+            throw new InvalidOperationException("Cannot transcribe the transcript with the specified organization");
+        }
+
+        var currentSubscription = orgWithSubscriptionDetails.CurrentSubscription;
+        if (currentSubscription == null)
+        {
+            throw new InvalidOperationException("Org has no subscription");
+        }
+
+        if (currentSubscription.IsExpired || currentSubscription.SubscriptionStatus != SubscriptionStatus.Active ||
+            currentSubscription.MinutesRemaining < 0)
+        {
+            throw new InvalidOperationException("Org no longer has credits for transcription");
+        }
+
+        currentSubscription.AddMinutesUsed(transcript.DurationInMinutes);
 
         await _messagePublisher.PublishAsync(MessageChannel.TranscriptionProcess,
             new TranscriptionProcessMessage(JobStatus.Processing, transcript.UnprocessedObjectKey, null));
@@ -120,6 +144,7 @@ public class TranscriptionJob : ITranscriptionJob
                 outputObjectKey = uploadResult;
             }
 
+            await _organizationSubscriptionRepository.UpdateMinutesUsedByIdAsync(currentSubscription.Id, currentSubscription.MinutesUsed);
             await _transcriptRepository.UpdateStatusAsync(transcript.UnprocessedObjectKey, outputObjectKey,
                 TranscriptionJobStatus.Completed, userId);
             await _audioJobStorageService.DeleteAudioAsync(transcript.UnprocessedObjectKey, cancellationToken);
