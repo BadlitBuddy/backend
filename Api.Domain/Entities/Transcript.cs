@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using Api.Domain.Events;
 
 namespace Api.Domain.Entities;
@@ -10,6 +11,8 @@ public class Transcript : BaseAuditableEntity<int>
     public string? ProcessedObjectKey { get; set; }
     public TranscriptionJobStatus JobStatus { get; private set; }
     public TimeSpan Duration { get; set; }
+
+    [NotMapped] public long DurationInMinutes => (long)Math.Round(Duration.TotalMinutes);
 
     public void MarkAsUploaded()
     {
