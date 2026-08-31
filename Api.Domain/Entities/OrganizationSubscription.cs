@@ -34,4 +34,9 @@ public class OrganizationSubscription : BaseAuditableEntity<int>
     {
         SubscriptionPlan = subscriptionPlan;
     }
+
+    public void AddMinutesUsed(long minutesUsed)
+    {
+        MinutesUsed += minutesUsed;
+    }
 }
