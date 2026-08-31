@@ -123,6 +123,8 @@ public static class DependencyInjection
     public static IServiceCollection AddDataRepositories(this IServiceCollection services)
     {
         services.AddScoped<ITranscriptRepository, TranscriptRepository>();
+        services.AddScoped<IOrganizationRepository, OrganizationRepository>();
+        services.AddScoped<IOrganizationSubscriptionRepository, OrganizationSubscriptionRepository>();
 
         return services;
     }
