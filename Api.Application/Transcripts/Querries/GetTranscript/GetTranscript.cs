@@ -70,11 +70,15 @@ public class GetTranscriptHandler : IRequestHandler<GetTranscriptQuery, Result<G
             transcriptResultFile.Delete();
         }
 
+        var wordCount = transcriptionResult.WordCount > 0
+            ? transcriptionResult.WordCount.Value
+            : transcriptionResult.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+
         return Result<GetTranscriptResponse>.Success(new GetTranscriptResponse
         {
             Transcript = transcript.ToDto(),
             JsonData = transcriptionResult,
-            MetaData = new MetaData(transcriptionResult.WordCount ?? 0, transcriptionResult.Duration.ToString() ?? "unknown",
+            MetaData = new MetaData(wordCount, transcriptionResult.Duration.ToString() ?? "unknown",
                 transcriptionResult.Language ?? "unknown"),
             SrtSegments = request.IncludeSrtSegments ? _transcriptionExporter.ToSrtSegments(transcriptionResult) : null,
             VttSegments = request.IncludeVttSegments ? _transcriptionExporter.ToVttSegments(transcriptionResult) : null
