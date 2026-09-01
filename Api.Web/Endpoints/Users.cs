@@ -155,7 +155,7 @@ public class Users : IEndpointGroup
                     "An internal server error has occured.");
             }
 
-            return TypedResults.Redirect($"{successRedirectUrl}");
+            return TypedResults.Redirect($"{successRedirectUrl}?signUpSuccess=true");
         }
         catch (Exception)
         {
