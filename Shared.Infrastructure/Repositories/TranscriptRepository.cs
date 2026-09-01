@@ -32,6 +32,21 @@ public class TranscriptRepository : ITranscriptRepository
         });
     }
 
+    public async Task<Transcript?> GetByIdAsync(int id)
+    {
+        const string sql = """
+                               SELECT * FROM public."Transcripts"
+                               WHERE "Id" = @Id 
+                           """;
+
+        using var connection = _dbContext.CreateConnection();
+
+        return await connection.QuerySingleOrDefaultAsync<Transcript>(sql, new
+        {
+            Id = id
+        });
+    }
+
     public async Task<TranscriptDto?> UpdateStatusAsync(
         string unprocessedObjectKey,
         string? processedObjectKey,

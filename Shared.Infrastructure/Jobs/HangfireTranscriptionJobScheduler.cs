@@ -12,10 +12,10 @@ public class HangfireTranscriptionJobScheduler : ITranscriptionJobScheduler
         _backgroundJobClient = backgroundJobClient;
     }
 
-    public string EnqueueTranscriptionJob(string objectFileKey, CancellationToken cancellationToken)
+    public string EnqueueTranscriptionJob(int transcriptId, Guid userId, int organizationId, CancellationToken cancellationToken)
     {
         return _backgroundJobClient.Enqueue<ITranscriptionJob>(jobService =>
-            jobService.TranscribeFileAsync(objectFileKey, cancellationToken)
+            jobService.TranscribeFileAsync(transcriptId, userId, organizationId, cancellationToken)
         );
     }
 
