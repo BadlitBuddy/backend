@@ -77,7 +77,7 @@ public class Users : IEndpointGroup
         }
         catch (Exception)
         {
-            return RedirectWithError($"${clientDomain}/signup", "Google authentication failed.",
+            return RedirectWithError($"{clientDomain}/signup", "Google authentication failed.",
                 "An unexpected error occured while trying to authenticate with google, please try again.");
         }
     }
@@ -183,7 +183,7 @@ public class Users : IEndpointGroup
         }
         catch (Exception)
         {
-            return RedirectWithError($"${clientDomain}/login", "Google authentication failed.",
+            return RedirectWithError($"{clientDomain}/login", "Google authentication failed.",
                 "An unexpected error occured while trying to authenticate with google, please try again.");
         }
     }
