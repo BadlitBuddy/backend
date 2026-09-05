@@ -3,6 +3,7 @@ using System;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Api.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260829142025_SUBSCRIPTIONPLAN_AddTranscriptionMinutesLimit")]
+    partial class SUBSCRIPTIONPLAN_AddTranscriptionMinutesLimit
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -125,9 +128,6 @@ namespace Api.Infrastructure.Data.Migrations
                     b.Property<Guid?>("LastModifiedByUserId")
                         .HasColumnType("uuid");
 
-                    b.Property<long>("MinutesUsed")
-                        .HasColumnType("bigint");
-
                     b.Property<int>("OrganizationId")
                         .HasColumnType("integer");
 
@@ -156,7 +156,8 @@ namespace Api.Infrastructure.Data.Migrations
 
                     b.HasIndex("LastModifiedByUserId");
 
-                    b.HasIndex("OrganizationId");
+                    b.HasIndex("OrganizationId")
+                        .IsUnique();
 
                     b.HasIndex("SubscriptionPlanId");
 
@@ -454,7 +455,7 @@ namespace Api.Infrastructure.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<int>("OrganizationId")
+                    b.Property<int?>("OrganizationId")
                         .HasColumnType("integer");
 
                     b.Property<string>("PublicId")
@@ -726,8 +727,8 @@ namespace Api.Infrastructure.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Api.Domain.Entities.Organization", "Organization")
-                        .WithMany("Subscriptions")
-                        .HasForeignKey("OrganizationId")
+                        .WithOne("OrganizationSubscription")
+                        .HasForeignKey("Api.Domain.Entities.OrganizationSubscription", "OrganizationId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -855,8 +856,7 @@ namespace Api.Infrastructure.Data.Migrations
                     b.HasOne("Api.Domain.Entities.Organization", "Organization")
                         .WithMany()
                         .HasForeignKey("OrganizationId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("CreatedByUser");
 
@@ -929,7 +929,7 @@ namespace Api.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("Api.Domain.Entities.Organization", b =>
                 {
-                    b.Navigation("Subscriptions");
+                    b.Navigation("OrganizationSubscription");
                 });
 
             modelBuilder.Entity("Api.Domain.Entities.User", b =>

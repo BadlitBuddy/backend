@@ -3,6 +3,7 @@ using System;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Api.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260830073603_DOMAINUSER_MakeOrganizationRequired")]
+    partial class DOMAINUSER_MakeOrganizationRequired
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -125,9 +128,6 @@ namespace Api.Infrastructure.Data.Migrations
                     b.Property<Guid?>("LastModifiedByUserId")
                         .HasColumnType("uuid");
 
-                    b.Property<long>("MinutesUsed")
-                        .HasColumnType("bigint");
-
                     b.Property<int>("OrganizationId")
                         .HasColumnType("integer");
 
@@ -156,7 +156,8 @@ namespace Api.Infrastructure.Data.Migrations
 
                     b.HasIndex("LastModifiedByUserId");
 
-                    b.HasIndex("OrganizationId");
+                    b.HasIndex("OrganizationId")
+                        .IsUnique();
 
                     b.HasIndex("SubscriptionPlanId");
 
@@ -319,6 +320,71 @@ namespace Api.Infrastructure.Data.Migrations
                     b.HasIndex("LastModifiedByUserId");
 
                     b.ToTable("SubscriptionPlans");
+                });
+
+            modelBuilder.Entity("Api.Domain.Entities.SubscriptionUsage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset>("Created")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid?>("DeletedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("LastModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid?>("LastModifiedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("MinutesUsed")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("OrganizationSubscriptionId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PublicId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("DeletedById");
+
+                    b.HasIndex("LastModifiedByUserId");
+
+                    b.HasIndex("OrganizationSubscriptionId", "PublicId");
+
+                    b.ToTable("SubscriptionUsages");
                 });
 
             modelBuilder.Entity("Api.Domain.Entities.Transcript", b =>
@@ -726,8 +792,8 @@ namespace Api.Infrastructure.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Api.Domain.Entities.Organization", "Organization")
-                        .WithMany("Subscriptions")
-                        .HasForeignKey("OrganizationId")
+                        .WithOne("OrganizationSubscription")
+                        .HasForeignKey("Api.Domain.Entities.OrganizationSubscription", "OrganizationId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -802,6 +868,38 @@ namespace Api.Infrastructure.Data.Migrations
                     b.Navigation("DeletedByUser");
 
                     b.Navigation("LastModifiedByUser");
+                });
+
+            modelBuilder.Entity("Api.Domain.Entities.SubscriptionUsage", b =>
+                {
+                    b.HasOne("Api.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Api.Domain.Entities.User", "DeletedByUser")
+                        .WithMany()
+                        .HasForeignKey("DeletedById")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Api.Domain.Entities.User", "LastModifiedByUser")
+                        .WithMany()
+                        .HasForeignKey("LastModifiedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Api.Domain.Entities.OrganizationSubscription", "OrganizationSubscription")
+                        .WithMany("SubscriptionUsages")
+                        .HasForeignKey("OrganizationSubscriptionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("DeletedByUser");
+
+                    b.Navigation("LastModifiedByUser");
+
+                    b.Navigation("OrganizationSubscription");
                 });
 
             modelBuilder.Entity("Api.Domain.Entities.Transcript", b =>
@@ -929,7 +1027,12 @@ namespace Api.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("Api.Domain.Entities.Organization", b =>
                 {
-                    b.Navigation("Subscriptions");
+                    b.Navigation("OrganizationSubscription");
+                });
+
+            modelBuilder.Entity("Api.Domain.Entities.OrganizationSubscription", b =>
+                {
+                    b.Navigation("SubscriptionUsages");
                 });
 
             modelBuilder.Entity("Api.Domain.Entities.User", b =>

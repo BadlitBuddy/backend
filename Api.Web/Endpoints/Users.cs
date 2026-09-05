@@ -2,6 +2,7 @@ using Api.Application.Common.Interfaces;
 using Api.Application.Users.Commands.RegisterUser;
 using Api.Application.Users.Dtos;
 using Api.Application.Users.Queries.GetCurrentUserDetails;
+using Api.Application.Users.Queries.GetCurrentUserSubscriptionDetails;
 using Api.Infrastructure.Identity;
 using Api.Web.Configuration;
 using Microsoft.AspNetCore.Authentication;
@@ -25,6 +26,7 @@ public class Users : IEndpointGroup
         groupBuilder.MapGet("login", Login);
         groupBuilder.MapGet("auth/google-response-login", LoginGoogleCallback);
         groupBuilder.MapGet("me", GetUserDetails);
+        groupBuilder.MapGet("me/organization", GetUserOrganization);
         groupBuilder.MapPost("refresh", Refresh);
         groupBuilder.MapPost("logout", Logout).RequireAuthorization();
     }
@@ -153,7 +155,7 @@ public class Users : IEndpointGroup
                     "An internal server error has occured.");
             }
 
-            return TypedResults.Redirect($"{successRedirectUrl}");
+            return TypedResults.Redirect($"{successRedirectUrl}?signUpSuccess=true");
         }
         catch (Exception)
         {
@@ -260,6 +262,20 @@ public class Users : IEndpointGroup
         IOptions<ClientOptions> clientOptions, ISender sender)
     {
         var result = await sender.Send(new GetCurrentUserDetailsQuery());
+        if (result.IsFailure)
+        {
+            return result.ToProblemResult();
+        }
+
+        return TypedResults.Ok(result.Value);
+    }
+
+    [EndpointSummary("Get User Organization Details")]
+    [EndpointDescription("Gets the current users organization details with subscription details")]
+    public async static Task<Results<ProblemHttpResult, Ok<SubscriptionDetailsDto>>> GetUserOrganization(
+        IOptions<ClientOptions> clientOptions, ISender sender)
+    {
+        var result = await sender.Send(new GetCurrentUserSubscriptionDetailsQuery());
         if (result.IsFailure)
         {
             return result.ToProblemResult();

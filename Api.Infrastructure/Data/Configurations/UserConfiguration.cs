@@ -13,6 +13,7 @@ public class UserConfiguration
 
         builder.HasOne(x => x.Organization)
             .WithMany()
-            .HasForeignKey(x => x.OrganizationId).OnDelete(DeleteBehavior.Restrict);
+            .HasForeignKey(x => x.OrganizationId).OnDelete(DeleteBehavior.Restrict)
+            .IsRequired();
     }
 }
