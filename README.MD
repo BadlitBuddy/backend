@@ -1,6 +1,6 @@
-# WordScribe Backend
+# BadlitBuddy Backend
 
-WordScribe is a scalable, distributed audio transcription backend built using **.NET 10**, designed to process media files using **Whisper.net** (a C# wrapper for whisper.cpp). It features a decoupled architecture composed of an ASP.NET Core Web API and autonomous Whisper Worker Services orchestrated via **Hangfire** and **Redis**.
+BadlitBuddy is a scalable, distributed audio transcription backend built using **.NET 10**, designed to process media files using **Whisper.net** (a C# wrapper for whisper.cpp) and third-party whisper providers (**Groq**, **Cloudflare Workers AI**). It features a decoupled architecture composed of an ASP.NET Core Web API and autonomous Whisper Worker Services orchestrated via **Hangfire** and **Redis**, with optional orchestration and telemetry via **.NET Aspire**.
 
 ![alt text](app-architecture.png)
 
@@ -33,35 +33,46 @@ The system architecture is designed for high scalability, allowing multiple Whis
 ```
 
 ### Flow of Data:
+
 1. **Upload Request**: The client requests a presigned upload URL from the Web API.
-2. **Direct Upload**: The client uploads the audio/video file directly to **Cloudflare R2 / S3** storage using the presigned URL.
+2. **Direct Upload**: The client uploads the audio/video file directly to **Cloudflare R2 / AWS S3** storage using the presigned URL.
 3. **Queue Job**: The API enqueues a transcription job to **Redis** using **Hangfire**.
-   - *Note*: In Development Mode, a background poller (`S3 Poller`) can monitor the bucket for uploads (since Cloudflare R2 bucket event notifications can be costly).
-4. **Retrieve & Process**: An available **Whisper Worker Service** pulls the job from Hangfire, downloads the target media file from R2/S3, and runs it through the local **Whisper.net** engine.
-5. **Save & Notify**: The worker uploads the completed transcription file back to R2/S3, generates a presigned download URL, and notifies the client (via Redis pub/sub or Hangfire state change filters).
+4. **Retrieve & Process**: An available **Whisper Worker Service** pulls the job from Hangfire, downloads the target media file from R2/S3, and runs it through the configured engine (**Whisper.net**, **Groq**, or **Cloudflare Workers AI**).
+5. **Save & Notify**: The worker uploads the completed transcription file (JSON, SRT, VTT, TXT) back to R2/S3, updates status in PostgreSQL, and publishes completion events via Redis pub/sub.
 
 ---
 
 ## Project Structure
 
-The projecti structured following a Clean Architecture approach:
+The project is structured following Clean Architecture principles:
 
-*   **Api.Web**: ASP.NET Core Web API entrypoint. Handles user authentication (via Supabase), generates presigned storage URLs, enqueues jobs, and manages transcription metadata.
-*   **Api.Application** & **Api.Domain**: Houses the API's core business logic, domain models, and application workflows.
-*   **WhisperService.WorkerService**: A .NET Worker Service running a Hangfire server instance to process queued jobs using the Whisper engine.
-*   **WhisperService.Core** & **WhisperService.Infrastructure**: Implements transcription-specific components, including the Whisper engine wrapper and runtime logic.
-*   **ModelDownloader**: A utility CLI application to download pre-trained GGML Whisper models (e.g. Tiny, Medium, LargeV3Turbo) directly from HuggingFace/GitHub.
-*   **Shared Modules**:
-    *   **Shared.Abstractions**: Common interfaces and abstract contracts (e.g., storage, jobs, services).
-    *   **Shared.Contracts**: Data transfer objects (DTOs) and application-wide constants (languages, model options).
-    *   **Shared.Infrastructure**: Shared cross-cutting concerns such as AWS S3 clients, Hangfire Redis storage setup, and configuration options.
+- **Api.Web**: ASP.NET Core Web API entrypoint. Handles user authentication (JWT & Google OAuth with ASP.NET Core Identity), API endpoints (Scalar API documentation), presigned storage URLs, transcription metadata, and Hangfire dashboard.
+- **Api.Application** & **Api.Domain**: Houses the API's core business logic, domain entities (transcriptions, organizations, subscriptions), interfaces, and CQRS/application workflows.
+- **Api.Infrastructure**: Database persistence using **Entity Framework Core** with **PostgreSQL** (`Npgsql.EntityFrameworkCore.PostgreSQL`), JWT token services, Google auth, and interceptors for auditing/soft-delete.
+- **Api.BackgroundServices**: _(Legacy)_ Background services containing earlier prototypes like `S3PollerWorker` (previously used for local bucket polling).
+- **WhisperService.WorkerService**: A .NET Worker Service running a Hangfire server instance to process queued transcription jobs using the configured transcription provider.
+- **WhisperService.Core** & **WhisperService.Infrastructure**: Implements transcription-specific components, including the Whisper engine wrapper, audio extraction/processing (FFMpegCore, NAudio), and external API clients (Groq, Cloudflare Workers AI).
+- **Aspire.AppHost**, **Aspire.ServiceDefaults**, & **Aspire.Shared**: .NET Aspire orchestration and shared telemetry defaults for running and observing the distributed system locally.
+- **ModelDownloader**: _(Legacy / Unused)_ Utility CLI previously used to download pre-trained GGML Whisper models. **Note:** ModelDownloader is no longer used since model downloading is handled directly via Docker and CI/CD pipelines.
+- **Shared Modules**:
+  - **Shared.Abstractions**: Common interfaces and abstract contracts (storage, jobs, repositories, services).
+  - **Shared.Common**: Utility helpers and shared functionality.
+  - **Shared.Contracts**: Data transfer objects (DTOs), API contracts, and application-wide constants/enums (languages, model options, transcription providers).
+  - **Shared.Infrastructure**: Shared cross-cutting concerns such as AWS S3 / Cloudflare R2 client setup, Hangfire Redis storage, Dapper repository access, Redis pub/sub messaging, and job execution implementations.
 
 ---
 
 ## Tech Stack
 
-*   **Runtime**: .NET 10
-*   **Queue & Orchestration**: Hangfire with Redis (`Hangfire.Redis.StackExchange`)
-*   **Transcription Engine**: Whisper.net (utilizing whisper.cpp runtimes)
-*   **Storage**: Cloudflare R2 / AWS S3 compatibility via `AWSSDK.S3`
-*   **Database**: SQL-based database for persistence
+- **Runtime & Orchestration**: .NET 10, .NET Aspire
+- **API Documentation**: OpenAPI / Scalar (`Scalar.AspNetCore`)
+- **Authentication**: ASP.NET Core Identity with JWT Bearer and Google OAuth
+- **Queue & Orchestration**: Hangfire with Redis (`Hangfire.Redis.StackExchange`)
+- **Transcription Engines & Providers**:
+  - **Whisper.net** (utilizing whisper.cpp runtime with GGML models)
+  - **Groq Whisper API**
+  - **Cloudflare Workers AI Whisper**
+- **Storage**: Cloudflare R2 / AWS S3 compatibility via `AWSSDK.S3`
+- **Database**: PostgreSQL (Entity Framework Core for API data access & Dapper for worker repositories)
+- **Audio Processing**: FFMpegCore, NAudio
+- **Messaging**: Redis Pub/Sub (`StackExchange.Redis`)
