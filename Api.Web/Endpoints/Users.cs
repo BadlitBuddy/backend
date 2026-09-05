@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Options;
+using NanoidDotNet;
 
 namespace Api.Web.Endpoints;
 
@@ -128,7 +129,8 @@ public class Users : IEndpointGroup
             var user = await userManager.FindByEmailAsync(email);
             if (user == null)
             {
-                var userPassword = $"{email}-WS-{nameIdentifier}";
+                var nanoId = Nanoid.Generate(size: 10);
+                var userPassword = $"{email}-WS-{nameIdentifier}-{nanoId}";
                 RegisterUserCommand command = new RegisterUserCommand
                 {
                     Email = email,
