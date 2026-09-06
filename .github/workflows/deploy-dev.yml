@@ -124,9 +124,9 @@ jobs:
             --command="
               set -e
               cd ~/whisper-service
-              docker compose pull
-              docker compose up -d --remove-orphans
-              docker image prune -f
+              sudo docker compose pull
+              sudo docker compose up -d --remove-orphans
+              sudo docker image prune -f
             "
 
       - name: Clean up Whisper Environment Variables
