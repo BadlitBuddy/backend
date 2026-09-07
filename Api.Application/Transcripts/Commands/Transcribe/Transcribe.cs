@@ -50,10 +50,6 @@ public class TranscribeFileHandler : IRequestHandler<TranscribeFileCommand, Resu
 
         var user = await _dbContext.DomainUsers.AsNoTracking()
             .SingleOrDefaultAsync(u => u.PublicId == _currentUserService.PublicId, cancellationToken: cancellationToken);
-        if (user == null)
-        {
-            return Result<TranscribedFileResponse>.Failure(["There was an issue with transcribing. please try again."]);
-        }
 
         var userTier = ResolveTier();
 
@@ -61,6 +57,11 @@ public class TranscribeFileHandler : IRequestHandler<TranscribeFileCommand, Resu
         {
             case UserTier.Free:
                 var freeTranscriptionJob = await TranscribeFree(request, user, cancellationToken);
+                if (freeTranscriptionJob == null)
+                {
+                    return Result<TranscribedFileResponse>.Failure(["There was an issue with transcribing. please try again."]);
+                }
+
                 return Result<TranscribedFileResponse>.Success(new TranscribedFileResponse(
                     freeTranscriptionJob.PublicId,
                     freeTranscriptionJob.JobStatus, freeTranscriptionJob.Duration));
@@ -84,9 +85,14 @@ public class TranscribeFileHandler : IRequestHandler<TranscribeFileCommand, Resu
         };
     }
 
-    private async Task<Transcript> TranscribeFree(TranscribeFileCommand request, User user,
+    private async Task<Transcript?> TranscribeFree(TranscribeFileCommand request, User? user,
         CancellationToken cancellationToken)
     {
+        if (user == null)
+        {
+            return null;
+        }
+
         Transcript transcript;
         if (!string.IsNullOrWhiteSpace(request.Id))
         {
