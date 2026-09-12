@@ -27,6 +27,30 @@ jobs:
       - name: Restore & build solution
         run: dotnet build TranscriptionApp.sln --configuration Release --no-incremental
 
+      # ── EF Core Migration Bundle (Only on main) ───────────────────────────
+      - name: Install dotnet-ef tool
+        if: github.ref == 'refs/heads/main'
+        run: dotnet tool install --global dotnet-ef
+
+      - name: Generate Migration Bundle
+        if: github.ref == 'refs/heads/main'
+        run: |
+          dotnet ef migrations bundle \
+            --startup-project Api.Web/Api.Web.csproj \
+            --project Api.Infrastructure/Api.Infrastructure.csproj \
+            --output ./efbundle \
+            -r linux-x64 \
+            --force
+
+      - name: Upload Migration Bundle Artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: efbundle-linux-x64
+          path: ./efbundle
+          if-no-files-found: error
+          retention-days: 14
+
       # ── Docker setup ──────────────────────────────────────────────────────
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
