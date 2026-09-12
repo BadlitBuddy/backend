@@ -27,9 +27,9 @@ concurrency:
 
 jobs:
   deploy-prod:
-    name: Deploy API to Azure Container Apps
+    name: Deploy Services (Container Apps & Azure VM)
     environment: production
-    timeout-minutes: 15
+    timeout-minutes: 20
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
 
@@ -124,3 +124,56 @@ jobs:
       - name: Clean up API Environment Variables
         if: always()
         run: rm -f api.env
+
+      # ── Deploy Whisper Service to Azure VM ──
+      - name: Deploy Whisper Service to Azure VM
+        env:
+          AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          AZURE_VM_NAME: ${{ secrets.AZURE_VM_NAME }}
+          WHISPER_ENV_BASE64: ${{ secrets.WHISPER_ENV_BASE64 }}
+          IMAGE_TAG: ${{ steps.image-tag.outputs.tag }}
+        run: |
+          # 1. Combine base64 env and the dynamic IMAGE_TAG
+          echo "$WHISPER_ENV_BASE64" | base64 -d > whisper.env
+          echo -e "\nIMAGE_TAG=${IMAGE_TAG}" >> whisper.env
+          ENV_DATA=$(base64 -w 0 whisper.env)
+
+          # 2. Create the exact script to run on the VM
+          cat << EOF > deploy.sh
+          set -e
+          APP_DIR="/home/whisper-service-01-user/backend"
+
+          # Pull latest code using your user's SSH deploy key
+          sudo -u whisper-service-01-user git -C "\$APP_DIR" fetch origin main
+          sudo -u whisper-service-01-user git -C "\$APP_DIR" reset --hard origin/main
+
+          # Update the environment file used by the production Compose file
+          COMPOSE_DIR="\$APP_DIR/WhisperService.WorkerService"
+          echo "$ENV_DATA" | base64 -d > "\$COMPOSE_DIR/.env"
+
+          # Deploy the production Compose definition explicitly
+          cd "\$COMPOSE_DIR"
+          docker compose -f docker-compose.prod.yml pull
+          docker compose -f docker-compose.prod.yml up -d --remove-orphans
+          docker image prune -f
+
+          echo "DEPLOY_SUCCESS"
+          EOF
+
+          # 3. Execute via Azure Run Command
+          OUTPUT=$(az vm run-command invoke \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$AZURE_VM_NAME" \
+            --command-id RunShellScript \
+            --scripts @deploy.sh \
+            --query "value[0].message" \
+            -o tsv)
+
+          echo "$OUTPUT"
+
+          # 4. Fail if deployment didn't finish
+          echo "$OUTPUT" | grep -q "DEPLOY_SUCCESS"
+
+      - name: Clean up Temp Files
+        if: always()
+        run: rm -f whisper.env deploy.sh
