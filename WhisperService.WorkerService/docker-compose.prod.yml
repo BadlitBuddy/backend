@@ -1,0 +1,10 @@
+name: badlitbuddy-transcription-service-prod
+services:
+  whisper-service:
+    image: kjbdev/bb-whisper-service:main
+    container_name: bb-whisper-service
+    ports:
+      - "5001:8080"
+    env_file:
+      - .env
+    restart: unless-stopped
