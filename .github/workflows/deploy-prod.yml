@@ -1,0 +1,126 @@
+name: CD - Deploy to Prod
+
+on:
+  workflow_run:
+    workflows: ["CI - Build and Push Docker Images"]
+    types: [completed]
+    branches: ["main"]
+
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy (leave empty to use commit SHA)"
+        required: false
+        default: ""
+      ci_run_id:
+        description: "CI Run ID to fetch artifact from (leave empty for latest)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: cd-deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy-prod:
+    name: Deploy API to Azure Container Apps
+    environment: production
+    timeout-minutes: 15
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+
+      # ── .NET SDK Setup ───────────────────────────────────────────────────
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      # ── Download Migration Bundle Artifact ────────────────────────────────
+      - name: Determine CI Workflow Run ID
+        id: ci-run
+        run: |
+          if [ -n "${{ inputs.ci_run_id }}" ]; then
+            RUN_ID="${{ inputs.ci_run_id }}"
+          elif [ "${{ github.event_name }}" = "workflow_run" ]; then
+            RUN_ID="${{ github.event.workflow_run.id }}"
+          else
+            # Fallback for workflow_dispatch: get the latest successful CI run on main
+            RUN_ID=$(gh run list --workflow "CI - Build and Push Docker Images" --branch main --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+          fi
+          echo "run_id=${RUN_ID}" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download Migration Bundle Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: efbundle-linux-x64
+          path: ./
+          run-id: ${{ steps.ci-run.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Execute Database Migrations ───────────────────────────────────────
+      - name: Run EF Core Migrations
+        env:
+          DB_CONNECTION_STRING: ${{ secrets.DB_CONNECTION_STRING }}
+          ASPNETCORE_ENVIRONMENT: Production
+        run: |
+          chmod +x ./efbundle
+          ./efbundle --connection "$DB_CONNECTION_STRING" --verbose
+
+      # ── Azure Deployment ──────────────────────────────────────────────────
+      - name: Authenticate to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Determine Image Tag
+        id: image-tag
+        run: |
+          if [ -n "${{ inputs.image_tag }}" ]; then
+            TAG="${{ inputs.image_tag }}"
+          elif [ "${{ github.event_name }}" = "workflow_run" ] && [ -n "${{ github.event.workflow_run.head_sha }}" ]; then
+            SHORT_SHA=$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-7)
+            TAG="sha-${SHORT_SHA}"
+          else
+            SHORT_SHA=$(git rev-parse --short HEAD)
+            TAG="sha-${SHORT_SHA}"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare API Environment Variables
+        env:
+          API_ENV_BASE64: ${{ secrets.API_ENV_BASE64 }}
+        run: |
+          echo "$API_ENV_BASE64" | base64 -d > api.env
+
+      - name: Deploy API Service to Azure Container Apps
+        run: |
+          echo "Deploying bb-api image tag: ${{ steps.image-tag.outputs.tag }}"
+
+          # Parse non-empty and non-comment lines from api.env into an array
+          mapfile -t ENV_VARS < <(grep -v '^[[:space:]]*#' api.env | grep -v '^[[:space:]]*$')
+
+          az containerapp update \
+            --name "${{ secrets.AZURE_CONTAINER_APP_NAME }}" \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --image "docker.io/${{ secrets.DOCKER_USERNAME }}/bb-api:${{ steps.image-tag.outputs.tag }}" \
+            --cpu 0.5 \
+            --memory 1.0Gi \
+            --min-replicas 0 \
+            --max-replicas 1 \
+            --set-env-vars "${ENV_VARS[@]}"
+
+      - name: Clean up API Environment Variables
+        if: always()
+        run: rm -f api.env
